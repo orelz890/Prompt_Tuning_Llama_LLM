@@ -2,6 +2,9 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from configuration.config import Config as conf
+from huggingface_hub import login
+
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PromptTuningConfig, get_peft_model, PeftModel
 
@@ -22,6 +25,9 @@ class ModelManager:
             self.tokenizer = AutoTokenizer.from_pretrained(self.local_model_dir)
             self.model = AutoModelForCausalLM.from_pretrained(self.local_model_dir).to(self.device)
         else:
+            # Hugging Face
+            login(token=conf.hugging_token)
+            
             print(f"[INFO] Downloading model and tokenizer: {self.model_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             self.model = AutoModelForCausalLM.from_pretrained(self.model_name).to(self.device)

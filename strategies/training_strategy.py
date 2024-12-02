@@ -27,6 +27,7 @@ class TrainingStrategy(BasePipelineStrategy):
         print("[INFO] Starting training...")
         train_dataset, eval_dataset,_= self.preprocess_dataset()
         
+        print("im using device: " + self.device)
         data_collator = CustomDataCollatorSameSize(tokenizer=self.model_manager.tokenizer, device=self.device)
 
         training_args = TrainingArguments(

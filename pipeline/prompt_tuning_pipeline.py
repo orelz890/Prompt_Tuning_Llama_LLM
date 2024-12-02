@@ -17,9 +17,11 @@ class PromptTuningPipeline:
     def __init__(self, model_name: str,
                  dataset_path: str, 
                  output_dir: str, 
+                 local_model_dir: str,
                  device='cpu'):
-        
-        self.model_manager = ModelManager(model_name, device=device)
+                
+        self.model_manager = ModelManager(model_name, device=device, 
+                                          local_model_dir=local_model_dir)
         self.dataset_path = dataset_path
         self.output_dir = output_dir
         self.device = device
