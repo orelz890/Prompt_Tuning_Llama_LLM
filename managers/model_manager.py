@@ -49,6 +49,8 @@ class ModelManager:
 
     def configure_prompt_tuning(self, num_virtual_tokens):
         print(f"[INFO] Configuring Prompt Tuning with {num_virtual_tokens} virtual tokens.")
+        
+        # TODO - Read about it
         prompt_config = PromptTuningConfig(task_type="CAUSAL_LM", num_virtual_tokens=num_virtual_tokens)
         self.model = get_peft_model(self.model, prompt_config)
 

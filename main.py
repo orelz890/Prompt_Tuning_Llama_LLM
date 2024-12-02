@@ -30,8 +30,8 @@ base_output_dir = "./pretrained"
 base_local_model_dir = "./local_model"
 
 # model_name = "meta-llama/Llama-3.1-8b-instruct"
-model_name = "meta-llama/Llama-3.2-3B-Instruct"
-# model_name = "meta-llama/Llama-3.2-1B-Instruct"
+# model_name = "meta-llama/Llama-3.2-3B-Instruct"
+model_name = "meta-llama/Llama-3.2-1B-Instruct"
 
 dataset_path="Aviman1/Bot_Human_Prompt_Tuning_Dataset"
 
@@ -42,13 +42,16 @@ def main():
             
     local_model_dir = os.path.join(base_local_model_dir, model_name.lower())
     
-    actions = {'infer': 1, 'train': 2}
+    actions = {'exit': 0, 'infer': 1, 'train': 2}
     
     while True:
         
         try:
-            print("Actions: infer: 1, train: 2")
+            print("Actions: exit: 0, infer: 1, train: 2")
             action = int(input("[Enter Action Number]: "))
+            
+            if action == actions['exit']:
+                return
             
             if action > 2:
                 raise ValueError("Invalid action number. Please enter 1 or 2.")
@@ -71,9 +74,9 @@ def main():
             )
             
             if action == actions['train']:
-                pipeline.train(epochs=1)
+                pipeline.train(epochs=20, eval_steps=50)
             else:
-                pipeline.infer()
+                pipeline.infer(temperature=0.5, top_k=40, max_new_tokens=50)
         
         except ValueError as e:
             print(e)
@@ -87,13 +90,14 @@ if __name__ == "__main__":
 """ 
     TODO:
     
-    1. [-] Understand why it always generate the max amount - padding data? warning?
-    2. [v] Probably related, why we get the warning "Setting `pad_token_id` to `eos_token_id`:128001 for open-end generation."
-    3. [v] Fix GPU out of memory.
-    4. [-] Talk with Avi about the dataset - get a better one.
-    5. [-] Complete the other strategies.
-    6. [-] Test the model before training.
-    7. [-] Test the model after small amount of epochs training.
-    8. [-] Ask Amos if we want a lot of epochs - intentional overfiting?
-    9. [v] Find a smaller chat bot model.
+    1.  [-] Understand why it always generate the max amount - padding data? mask?
+    2.  [v] Probably related, fix the warning "Setting `pad_token_id` to `eos_token_id`:128001 for open-end generation."
+    3.  [v] Fix GPU out of memory.
+    4.  [-] Talk with Avi about the dataset - get a better one.
+    5.  [-] Complete the other strategies.
+    6.  [-] Test the model before training.
+    7.  [-] Test the model after small amount of epochs training.
+    8.  [-] Ask Amos if we want a lot of epochs - intentional overfiting?
+    9.  [v] Find a smaller chat bot model.
+    10. [-] Dive into the Prompt Engineering part - Read about it and how to use peft lib. 
 """ 

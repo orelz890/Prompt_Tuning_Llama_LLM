@@ -53,13 +53,26 @@ def main():
             attention_mask=inputs["attention_mask"],  # Provide attention mask
             do_sample=True,
             temperature=0.7,  # Adjust temperature for controlled randomness
-            max_new_tokens=30,
+            max_new_tokens=50,
             # repetition_penalty=1.5, # Discourage repeating phrases
             # length_penalty=1.5, # Penalize very long outputs
             top_k=40,
             top_p=0.9,
         )
 
+        # Count total tokens in the generated output
+        total_tokens = outputs.size(1)  # Outputs is of shape (batch_size, seq_length)
+
+        # Count input tokens (optional, if you want new tokens only)
+        input_token_count = inputs["input_ids"].size(1)
+
+        # Count only newly generated tokens
+        new_tokens_count = total_tokens - input_token_count
+
+        print(f"Total tokens in output: {total_tokens}")
+        print(f"Input tokens: {input_token_count}")
+        print(f"Newly generated tokens: {new_tokens_count}")
+                
         # Decode and print the model's response
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
         print(f"[MODEL]: {response}")
