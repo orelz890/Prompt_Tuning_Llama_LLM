@@ -8,6 +8,7 @@ class CustomDataCollatorSameSize:
         self.device = device
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
+                
         # Find the maximum length of `input_ids` and `labels` in the batch
         max_length = max(
             max(len(f["input_ids"]) for f in features),
@@ -28,15 +29,16 @@ class CustomDataCollatorSameSize:
             for f in features
         ]
 
-    
+        # print("input_ids: ", input_ids)
+        # print("attention_mask: ", attention_mask)
+        # print("labels: ", labels)
+        
+        
         # Create tensors on CPU first
         batch = {
             "input_ids": torch.tensor(input_ids, dtype=torch.long),
             "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
             "labels": torch.tensor(labels, dtype=torch.long),
         }
-
-        # # Move tensors to the specified device
-        # batch = {key: value.to(self.device) for key, value in batch.items()}
         
         return batch

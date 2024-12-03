@@ -30,8 +30,8 @@ class PromptTuningPipeline:
               num_virtual_tokens: int = 100, 
               lr: float = 5e-5, 
               per_device_train_batch_size: int = 1,
-              save_steps: int = 500, 
-              eval_steps: int = 100, 
+              save_steps: int = 50, 
+              eval_steps: int = 50, 
               save_total_limit: int = 2, 
               epochs: int = 20
               ):
@@ -44,20 +44,24 @@ class PromptTuningPipeline:
         
         print("\n====================== train ======================\n")
         ts = TrainingStrategy(self.model_manager, self.dataset_path, self.output_dir)
-        ts.execute(lr=lr, 
-                    per_device_train_batch_size=per_device_train_batch_size,
-                    save_steps=save_steps, 
-                    eval_steps=eval_steps, 
-                    save_total_limit=save_total_limit, 
-                    epochs=epochs)
+        ts.execute(
+            lr=lr, 
+            per_device_train_batch_size=per_device_train_batch_size,
+            save_steps=save_steps, 
+            eval_steps=eval_steps, 
+            save_total_limit=save_total_limit, 
+            epochs=epochs
+        )
         print("\n====================== finished training ======================\n")
 
     def infer(self,
-            max_length: int = 128,
-            temperature: float = 0.7,
-            max_new_tokens: int = 20,
-            top_k=40,
-            top_p=0.9):
+        max_length: int = 128,
+        temperature: float = 0.2,
+        max_new_tokens: int = 20,
+        top_k=40,
+        top_p=0.95,
+        model_type="peft"
+    ):
         
         self.model_manager.load_prompt_tuned_model(self.output_dir)
         
@@ -67,7 +71,8 @@ class PromptTuningPipeline:
             temperature = temperature,
             max_new_tokens = max_new_tokens,
             top_k=top_k,
-            top_p=top_p
+            top_p=top_p,
+            model_type=model_type
         )
 
     def evaluate(self):
@@ -85,6 +90,6 @@ class PromptTuningPipeline:
         self.model_manager.load_prompt_tuned_model(self.output_dir)
         FineTuningStrategy(self.model_manager, new_dataset_path, self.output_dir).execute()
 
-    def to(self, device):
-        self.device = device
-        self.model_manager.device = device
+    # def to(self, device):
+    #     self.device = device
+    #     self.model_manager.device = device

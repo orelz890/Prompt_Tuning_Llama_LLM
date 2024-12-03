@@ -20,10 +20,10 @@ class InferenceStrategy(BasePipelineStrategy):
         self.model_manager = model_manager
         self.device = model_manager.device
         
-        # Set the models pad token id
-        self.model_manager.model.generation_config.pad_token_id = self.model_manager.tokenizer.pad_token_id
+        # # Set the models pad token id
+        # self.model_manager.peft_model_prompt.generation_config.pad_token_id = self.model_manager.tokenizer.pad_token_id
 
-    def execute(self, max_length, temperature, max_new_tokens, top_k, top_p):
+    def execute(self, max_length, temperature, max_new_tokens, top_p, model_type: str, top_k=40):
         print("[INFO] Entering interactive chat mode. Type 'exit' to quit.")
 
         with torch.no_grad():
@@ -33,7 +33,6 @@ class InferenceStrategy(BasePipelineStrategy):
                     print("[INFO] Exiting chat.")
                     break
 
-                
                 # Tokenize user input with attention mask
                 inputs = self.model_manager.tokenizer(
                     user_input,
@@ -44,17 +43,14 @@ class InferenceStrategy(BasePipelineStrategy):
                 ).to(self.device)
 
 
-                # Generate output with controlled length and sampling
-                outputs = self.model_manager.model.generate(
-                    input_ids=inputs["input_ids"],
-                    attention_mask=inputs["attention_mask"],  # Provide attention mask
-                    do_sample=True,
-                    temperature=temperature,  # Adjust temperature for controlled randomness
+                # Generate output
+                outputs = self.get_outputs(
+                    inputs=inputs,
                     max_new_tokens=max_new_tokens,
-                    # repetition_penalty=1.5, # Discourage repeating phrases
-                    # length_penalty=1.5, # Penalize very long outputs
+                    temperature=temperature,
+                    top_p=top_p,
                     top_k=top_k,
-                    top_p=top_p
+                    model_type=model_type
                 )
                 
                 # Count total tokens in the generated output
@@ -73,3 +69,27 @@ class InferenceStrategy(BasePipelineStrategy):
                 # Decode and print the model's response
                 response = self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True)
                 print(f"[MODEL]: {response}")
+                
+    # this function returns the outputs from the model received, and inputs.
+    def get_outputs(self, inputs, max_new_tokens, top_p, top_k, temperature, model_type: str):
+        
+        # TODO - handle errors
+        if model_type == "foundational":
+            model = self.model_manager.foundational_model
+        else:
+            model = self.model_manager.peft_model_prompt
+        
+        outputs = model.generate(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            do_sample=True,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            repetition_penalty=1.5,  # Avoid repetition.
+            # length_penalty=1.5, # Penalize very long outputs
+            early_stopping=True,  # The model can stop before reach the max_length
+            eos_token_id=self.model_manager.tokenizer.eos_token_id,
+        )
+        return outputs

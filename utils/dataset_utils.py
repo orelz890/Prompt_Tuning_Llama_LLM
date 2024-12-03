@@ -33,6 +33,7 @@ def preprocess_and_tokenize(dataset_path, tokenizer):
             max_length=512,
         )["input_ids"]
 
+        # TODO - check this padding
         # Ensure `labels` match `input_ids` length
         for i in range(len(labels)):
             input_len = len(inputs["input_ids"][i])
@@ -59,5 +60,7 @@ def preprocess_and_tokenize(dataset_path, tokenizer):
     print("Labels:", sample["labels"])
     print("Attention Mask:", sample["attention_mask"])
 
-
+    # Display example
+    # print("tokenized_train_dataset example[:5]: ", tokenized_train_dataset[:5])
+    
     return tokenized_train_dataset, tokenized_eval_dataset, tokenized_test_dataset

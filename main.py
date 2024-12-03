@@ -32,8 +32,12 @@ base_local_model_dir = "./local_model"
 # model_name = "meta-llama/Llama-3.1-8b-instruct"
 # model_name = "meta-llama/Llama-3.2-3B-Instruct"
 model_name = "meta-llama/Llama-3.2-1B-Instruct"
+# model_name = "cmarkea/bloomz-560m-sft-chat"
 
 dataset_path="Aviman1/Bot_Human_Prompt_Tuning_Dataset"
+
+NUM_VIRTUAL_TOKENS = 30
+NUM_EPOCHS = 50
 
 
 def main():
@@ -74,9 +78,23 @@ def main():
             )
             
             if action == actions['train']:
-                pipeline.train(epochs=20, eval_steps=50)
+                pipeline.train(
+                    eval_steps=50, 
+                    num_virtual_tokens=NUM_VIRTUAL_TOKENS, 
+                    epochs=NUM_EPOCHS,
+                    lr=0.0035
+                )
             else:
-                pipeline.infer(temperature=0.5, top_k=40, max_new_tokens=50)
+                # print("types{ Original: foundational, Trained: peft}")
+                # model_type = input("[Enter model type]: ")
+                
+                pipeline.infer(
+                    temperature=0.25, 
+                    top_p=0.95, 
+                    max_new_tokens=50, 
+                    top_k=40,
+                    # model_type=model_type
+                )
         
         except ValueError as e:
             print(e)
