@@ -1,104 +1,72 @@
-import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64,expandable_segments:True"
+from configuration.config import Config
 
-import gc
+conf = Config()
 
-gc.collect()
-
-from configuration.config import Config as conf
-from huggingface_hub import login
 from pipeline.prompt_tuning_pipeline import PromptTuningPipeline
+import os
 
-import torch
 
-device = 'cpu'
-
-if torch.cuda.is_available():
-    # Clear cached data
-    torch.cuda.empty_cache()
+def get_user_action(instruction, options = None, type = int):
+    if options:
+        print(options)
     
-    # Force PyTorch to release cached memory
-    torch.cuda.memory_stats()
-
-    # torch.cuda.set_per_process_memory_fraction(0.2)
-    print(torch.cuda.memory_summary(device="cuda"))
-    device = 'cuda'
-    
-    
-# Define the base output directory
-base_output_dir = "./pretrained"
-base_local_model_dir = "./local_model"
-
-# model_name = "meta-llama/Llama-3.1-8b-instruct"
-# model_name = "meta-llama/Llama-3.2-3B-Instruct"
-model_name = "meta-llama/Llama-3.2-1B-Instruct"
-# model_name = "cmarkea/bloomz-560m-sft-chat"
-
-dataset_path="Aviman1/Bot_Human_Prompt_Tuning_Dataset"
-
-NUM_VIRTUAL_TOKENS = 30
-NUM_EPOCHS = 50
+    return type(input(f"[{instruction}]: "))
 
 
 def main():
     
-    print("Using Device: " + device)
-            
-    local_model_dir = os.path.join(base_local_model_dir, model_name.lower())
+    # Foundational Model Folder Path
+    local_model_dir = os.path.join(conf.PATHS["base_local_model_dir"], conf.MODELS["foundational_model"].lower())
     
     actions = {'exit': 0, 'infer': 1, 'train': 2}
     
     while True:
         
         try:
-            print("Actions: exit: 0, infer: 1, train: 2")
-            action = int(input("[Enter Action Number]: "))
+            action = get_user_action(options="Actions: exit: 0, infer: 1, train: 2", instruction="Enter Action Number", type=int)
             
+            # Exit
             if action == actions['exit']:
                 return
             
-            if action > 2:
-                raise ValueError("Invalid action number. Please enter 1 or 2.")
+            # Invalid Input
+            if not isinstance(action, int) or action not in actions.values():
+                print("Invalid action number.")
+                continue
             
-            subfolder_name = input("[Enter model name]: ")
-            output_dir = os.path.join(base_output_dir, model_name.lower(), subfolder_name.lower())
+            # User Input - Output Folder 
+            subfolder_name = get_user_action(instruction="Enter model name", type=str)
+            
+            # Output Dir Path
+            output_dir = os.path.join(conf.PATHS["base_output_dir"], conf.MODELS["foundational_model"].lower(), subfolder_name.lower())
+
+            
+            pipeline: PromptTuningPipeline = PromptTuningPipeline(
+                model_name=conf.MODELS["foundational_model"],
+                dataset_path=conf.PATHS["dataset_path"],
+                output_dir=output_dir,
+                local_model_dir=local_model_dir,
+                device=conf.DEVICE
+            )
             
             if action == actions['train']:
                 # Check if the name already exist
                 if os.path.isdir(output_dir):
                     print(f"The directory {output_dir} already exists.")
                     continue
-
-            pipeline: PromptTuningPipeline = PromptTuningPipeline(
-                model_name=model_name,
-                dataset_path=dataset_path,
-                output_dir=output_dir,
-                local_model_dir=local_model_dir,
-                device=device
-            )
-            
-            if action == actions['train']:
+                
                 pipeline.train(
-                    eval_steps=50, 
-                    num_virtual_tokens=NUM_VIRTUAL_TOKENS, 
-                    epochs=NUM_EPOCHS,
-                    lr=0.0035
+                    # Change Default Values If Needed
                 )
-            else:
-                # print("types{ Original: foundational, Trained: peft}")
-                # model_type = input("[Enter model type]: ")
+
+            elif action == actions['infer']:
                 
                 pipeline.infer(
-                    temperature=0.25, 
-                    top_p=0.95, 
-                    max_new_tokens=50, 
-                    top_k=40,
-                    # model_type=model_type
+                    # Change Default Values If Needed
                 )
         
         except ValueError as e:
             print(e)
-            continue
     
 
 if __name__ == "__main__":

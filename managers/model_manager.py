@@ -23,6 +23,8 @@ class ModelManager:
         os.makedirs(self.local_model_dir, exist_ok=True)
 
     def load_model_and_tokenizer(self):
+        print(f"[INFO] Loading The Foundational Model")
+
         if os.path.exists(os.path.join(self.local_model_dir, "config.json")):
             print(f"[INFO] Loading model and tokenizer from local directory: {self.local_model_dir}")
             self.tokenizer = AutoTokenizer.from_pretrained(self.local_model_dir)

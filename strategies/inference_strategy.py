@@ -1,3 +1,7 @@
+from configuration.config import Config
+
+conf = Config()
+
 import os
 import sys
 import torch
@@ -23,9 +27,11 @@ class InferenceStrategy(BasePipelineStrategy):
         # # Set the models pad token id
         # self.model_manager.peft_model_prompt.generation_config.pad_token_id = self.model_manager.tokenizer.pad_token_id
 
-    def execute(self, max_length, temperature, max_new_tokens, top_p, model_type: str, top_k=40):
+    def execute(self, model_type: str, **kwargs):
         print("[INFO] Entering interactive chat mode. Type 'exit' to quit.")
 
+        args = {**conf.INFER_HYPER_PARAMETERS, **kwargs}
+        
         with torch.no_grad():
             while True:
                 user_input = input("[USER]: ")
@@ -39,18 +45,15 @@ class InferenceStrategy(BasePipelineStrategy):
                     return_tensors="pt",
                     padding=True,
                     truncation=True,
-                    max_length=max_length  # Cap input length
+                    max_length=args.get("max_length")  # Cap input length
                 ).to(self.device)
 
 
                 # Generate output
                 outputs = self.get_outputs(
                     inputs=inputs,
-                    max_new_tokens=max_new_tokens,
-                    temperature=temperature,
-                    top_p=top_p,
-                    top_k=top_k,
-                    model_type=model_type
+                    model_type=model_type,
+                    **args
                 )
                 
                 # Count total tokens in the generated output
@@ -71,7 +74,7 @@ class InferenceStrategy(BasePipelineStrategy):
                 print(f"[MODEL]: {response}")
                 
     # this function returns the outputs from the model received, and inputs.
-    def get_outputs(self, inputs, max_new_tokens, top_p, top_k, temperature, model_type: str):
+    def get_outputs(self, inputs, model_type: str, **kwargs):
         
         # TODO - handle errors
         if model_type == "foundational":
@@ -80,16 +83,16 @@ class InferenceStrategy(BasePipelineStrategy):
             model = self.model_manager.peft_model_prompt
         
         outputs = model.generate(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
-            do_sample=True,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            repetition_penalty=1.5,  # Avoid repetition.
+            input_ids= inputs["input_ids"],
+            attention_mask= inputs["attention_mask"],
+            do_sample= kwargs.get("do_sample"),
+            max_new_tokens= kwargs.get("max_new_tokens"),
+            temperature= kwargs.get("temperature"),
+            top_p= kwargs.get("top_p"),
+            top_k= kwargs.get("top_k"),
+            repetition_penalty= kwargs.get("repetition_penalty"),  # Avoid repetition.
             # length_penalty=1.5, # Penalize very long outputs
-            early_stopping=True,  # The model can stop before reach the max_length
-            eos_token_id=self.model_manager.tokenizer.eos_token_id,
+            early_stopping= kwargs.get("early_stopping"),  # The model can stop before reach the max_length
+            eos_token_id= self.model_manager.tokenizer.eos_token_id,
         )
         return outputs
