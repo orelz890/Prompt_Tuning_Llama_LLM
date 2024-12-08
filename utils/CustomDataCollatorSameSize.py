@@ -25,13 +25,9 @@ class CustomDataCollatorSameSize:
             for f in features
         ]
         labels = [
-            f["labels"] + [-100] * (max_length - len(f["labels"]))
+            f["labels"] + [self.tokenizer.pad_token_id] * (max_length - len(f["labels"]))
             for f in features
         ]
-
-        # print("input_ids: ", input_ids)
-        # print("attention_mask: ", attention_mask)
-        # print("labels: ", labels)
         
         
         # Create tensors on CPU first

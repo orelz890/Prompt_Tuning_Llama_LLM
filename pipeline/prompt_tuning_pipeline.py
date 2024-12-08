@@ -32,14 +32,15 @@ class PromptTuningPipeline:
                                           device = self.device, 
                                           local_model_dir = args.get("local_model_dir"))
 
-    def train(self, **kwargs):
+    def train(self, dataset_processor, **kwargs):
 
         self.setup(type="train", **kwargs)
         
         ts = TrainingStrategy(
             model_manager=self.model_manager, 
             dataset_path=self.dataset_path, 
-            output_dir=self.output_dir
+            output_dir=self.output_dir,
+            dataset_processor=dataset_processor
             )
         
         ts.execute(**kwargs)

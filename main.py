@@ -2,8 +2,13 @@ from configuration.config import Config
 
 conf = Config()
 
-from pipeline.prompt_tuning_pipeline import PromptTuningPipeline
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from pipeline.prompt_tuning_pipeline import PromptTuningPipeline
+from utils.Aviman1DatasetProcessor import Aviman1DatasetProcessor
+from utils.GooglePersonaDatasetProcessor import GooglePersonaDatasetProcessor
 
 
 def get_user_action(instruction, options = None, type = int):
@@ -43,7 +48,7 @@ def main():
             
             pipeline: PromptTuningPipeline = PromptTuningPipeline(
                 model_name=conf.MODELS["foundational_model"],
-                dataset_path=conf.PATHS["dataset_path"],
+                dataset_path=conf.DATA_PATH["dataset_path"],
                 output_dir=output_dir,
                 local_model_dir=local_model_dir,
                 device=conf.DEVICE
@@ -56,7 +61,10 @@ def main():
                     continue
                 
                 pipeline.train(
-                    # Change Default Values If Needed
+                    # Change Default Values If Needed. Example:
+                    # epochs=5
+                    # dataset_processor = Aviman1DatasetProcessor
+                    dataset_processor = GooglePersonaDatasetProcessor
                 )
 
             elif action == actions['infer']:

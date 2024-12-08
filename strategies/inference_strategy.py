@@ -30,7 +30,7 @@ class InferenceStrategy(BasePipelineStrategy):
     def execute(self, model_type: str, **kwargs):
         print("[INFO] Entering interactive chat mode. Type 'exit' to quit.")
 
-        args = {**conf.INFER_HYPER_PARAMETERS, **kwargs}
+        args = {**conf.INFER_HYPER_PARAMETERS, **conf.TOKENIZER, **kwargs}
         
         with torch.no_grad():
             while True:
@@ -55,6 +55,10 @@ class InferenceStrategy(BasePipelineStrategy):
                     model_type=model_type,
                     **args
                 )
+                
+                print(user_input)
+                print(inputs, [self.model_manager.tokenizer.convert_ids_to_tokens(id) for id in inputs['input_ids']])
+                print(outputs, [self.model_manager.tokenizer.convert_ids_to_tokens(id) for id in outputs[0]])
                 
                 # Count total tokens in the generated output
                 total_tokens = outputs.size(1)  # Outputs is of shape (batch_size, seq_length)
@@ -94,5 +98,6 @@ class InferenceStrategy(BasePipelineStrategy):
             # length_penalty=1.5, # Penalize very long outputs
             early_stopping= kwargs.get("early_stopping"),  # The model can stop before reach the max_length
             eos_token_id= self.model_manager.tokenizer.eos_token_id,
+            pad_token_id=self.model_manager.tokenizer.eos_token_id,
         )
         return outputs
