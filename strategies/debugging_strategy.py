@@ -24,8 +24,8 @@ class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
         
         self.model.eval()
         
-        print("[INFO] Debugging model output...")
-        test_inputs = ["Hello!", "How are you?", "What is the capital of France?"]
+        print("\n[INFO] Debugging model output...")
+        test_inputs = ["Hello!", "How are you?", "What is the capital of France?", "Are you a bot?"]
         for input_text in test_inputs:
             inputs = self.tokenizer(input_text,
                 return_tensors="pt",
@@ -39,16 +39,26 @@ class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
                 outputs = self.model.generate(
                     input_ids=inputs["input_ids"],
                     attention_mask= inputs["attention_mask"],
-                    max_length=50,
+                    max_length=20,
+                    min_length=1,
                     do_sample=True,
                     eos_token_id= self.tokenizer.eos_token_id,
                     pad_token_id=self.tokenizer.eos_token_id,
-                    repetition_penalty=1.5
+                    repetition_penalty=1.5,
+                    length_penalty=5.0,
+                    temperature=1,
+                    top_p=0.9,
+                    top_k=3,
+                    num_beams=3,  # Use beam search
+                    early_stopping=True,  # Stop generation on EOS
                 )
             
             # Decode and display results
             print(f"\n[INPUT]: {input_text}")
-            print(f"[OUTPUT]: {self.tokenizer.decode(outputs[0], skip_special_tokens=True)}\n")
+            print(f"[OUTPUT]: {self.tokenizer.decode(outputs[0], skip_special_tokens=True)}")
+            input_size = inputs["input_ids"].size(1)
+            outputs_size = outputs.size(1)
+            print(f"DETAILS: input_size: {input_size}, output_size: {outputs_size}\n")
         
         self.model.train()
 

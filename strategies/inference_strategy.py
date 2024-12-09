@@ -34,7 +34,7 @@ class InferenceStrategy(BasePipelineStrategy):
         
         with torch.no_grad():
             while True:
-                user_input = input("[USER]: ")
+                user_input = input("\n[USER]: ")
                 if user_input.lower() in {"exit", "quit"}:
                     print("[INFO] Exiting chat.")
                     break
@@ -57,9 +57,20 @@ class InferenceStrategy(BasePipelineStrategy):
                 )
                 
                 print(user_input)
-                print(inputs, [self.model_manager.tokenizer.convert_ids_to_tokens(id) for id in inputs['input_ids']])
-                print(outputs, [self.model_manager.tokenizer.convert_ids_to_tokens(id) for id in outputs[0]])
-                
+                # Convert input IDs to tokens for the entire batch
+                print(
+                    [
+                        self.model_manager.tokenizer.convert_ids_to_tokens(id)
+                        for input_ids in inputs["input_ids"]
+                        for id in input_ids.tolist()
+                    ],
+                )
+
+                # Convert output IDs to tokens
+                print(
+                    [self.model_manager.tokenizer.convert_ids_to_tokens(id) for id in outputs[0].tolist()],
+                )
+
                 # Count total tokens in the generated output
                 total_tokens = outputs.size(1)  # Outputs is of shape (batch_size, seq_length)
 
@@ -75,7 +86,7 @@ class InferenceStrategy(BasePipelineStrategy):
 
                 # Decode and print the model's response
                 response = self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True)
-                print(f"[MODEL]: {response}")
+                print(f"[MODEL]: {response}\n")
                 
     # this function returns the outputs from the model received, and inputs.
     def get_outputs(self, inputs, model_type: str, **kwargs):
@@ -90,12 +101,15 @@ class InferenceStrategy(BasePipelineStrategy):
             input_ids= inputs["input_ids"],
             attention_mask= inputs["attention_mask"],
             do_sample= kwargs.get("do_sample"),
-            max_new_tokens= kwargs.get("max_new_tokens"),
+            # max_new_tokens= kwargs.get("max_new_tokens"),
+            max_length=kwargs.get("max_tokens_length"),
+            min_length=kwargs.get("min_tokens_length"),
+            length_penalty=kwargs.get("length_penalty"),
+            num_beams=kwargs.get("num_beams"),  # Use beam search
             temperature= kwargs.get("temperature"),
             top_p= kwargs.get("top_p"),
             top_k= kwargs.get("top_k"),
             repetition_penalty= kwargs.get("repetition_penalty"),  # Avoid repetition.
-            # length_penalty=1.5, # Penalize very long outputs
             early_stopping= kwargs.get("early_stopping"),  # The model can stop before reach the max_length
             eos_token_id= self.model_manager.tokenizer.eos_token_id,
             pad_token_id=self.model_manager.tokenizer.eos_token_id,

@@ -31,7 +31,7 @@ class ModelManager:
             self.foundational_model = AutoModelForCausalLM.from_pretrained(self.local_model_dir, trust_remote_code=True).to(self.device)
         else:
             # Hugging Face
-            login(token=conf.hugging_token)
+            login(token=conf.API_KEYS.get("hugging_token"))
             
             print(f"[INFO] Downloading model and tokenizer: {self.model_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -50,6 +50,7 @@ class ModelManager:
             self.foundational_model.resize_token_embeddings(len(self.tokenizer))  # Resize embeddings if new tokens are added
             print(f"[INFO] Padding token set to: {self.tokenizer.pad_token}")
 
+        
     #    # Set the model configuration tokens
     #     self.foundational_model.config.pad_token_id = self.tokenizer.pad_token_id
     #     self.foundational_model.config.eos_token_id = self.tokenizer.eos_token_id
@@ -84,7 +85,7 @@ class ModelManager:
             is_trainable=False,
         ).to(self.device)
 
-
+        
     def save_model(self, output_dir: str, model_type: str):
         """
         Save the specified model and tokenizer.

@@ -21,7 +21,6 @@ from utils.DatasetProcessor import DatasetProcessor
 from utils.CustomDataCollatorSameSize import CustomDataCollatorSameSize
 
 
-
 # Training Strategy
 class TrainingStrategy(BasePipelineStrategy):
     def __init__(self, model_manager: ModelManager,
@@ -70,10 +69,10 @@ class TrainingStrategy(BasePipelineStrategy):
         # print(len(train_dataset))
         
         # Training args
-        training_args = self.create_training_arguments(data_size=len(train_dataset), **args)
+        training_args = self.create_training_arguments( **args)
         
         # Initialize optimizer and scheduler
-        self.setup_optimizer_and_scheduler(**args)
+        self.setup_optimizer_and_scheduler(data_size=len(train_dataset), **args)
         
         # Trainer
         trainer = self.create_trainer(
@@ -108,13 +107,13 @@ class TrainingStrategy(BasePipelineStrategy):
             train_dataset=train_dataset,  # The dataset used to tyrain the model.
             eval_dataset=eval_dataset,
             data_collator=data_collator,
-            optimizers=(self.optimizer, self.scheduler),  # Custom optimizer and scheduler
+            # optimizers=(self.optimizer, self.scheduler),  # Custom optimizer and scheduler
             callbacks=[test_callback]
             # tokenizer=self.model_manager.tokenizer,
         )
         return trainer
 
-    def create_training_arguments(self, data_size, **kwargs):
+    def create_training_arguments(self, **kwargs):
         
         training_args = TrainingArguments(
             output_dir=self.output_dir,  # Where the model predictions and checkpoints will be written
@@ -126,6 +125,7 @@ class TrainingStrategy(BasePipelineStrategy):
             eval_strategy=kwargs.get("eval_strategy"),
             eval_steps=kwargs.get("eval_steps"),
             save_steps=kwargs.get("save_steps"),
+            logging_steps=kwargs.get("eval_steps"),
             # metric_for_best_model=kwargs.get("metric_for_best_model"),
             # save_total_limit=kwargs.get("save_total_limit"),
             fp16=kwargs.get("fp16"),
@@ -134,9 +134,14 @@ class TrainingStrategy(BasePipelineStrategy):
             per_device_eval_batch_size=kwargs.get("batch_size"),
         )
         
+        # Print training arguments
+        print("\n[INFO] Training Arguments:")
+        for key, value in training_args.to_dict().items():
+            print(f"{key}: {value}")
+    
         return training_args
 
-    def setup_optimizer_and_scheduler(self, **kwargs):
+    def setup_optimizer_and_scheduler(self, data_size, **kwargs):
         """
         Initializes the Adam optimizer and ReduceLROnPlateau scheduler.
         """
@@ -150,11 +155,16 @@ class TrainingStrategy(BasePipelineStrategy):
             ]
             self.optimizer = AdamW(optimizer_grouped_parameters, lr=kwargs.get("learning_rate"))
       
+        num_training_steps = (kwargs.get("batch_size") * kwargs.get("epochs") * kwargs.get("num_train_epochs")) * data_size
+        
+        print("num_training_steps: ", num_training_steps)
+        
         self.scheduler = get_scheduler(
             name=kwargs.get("lr_scheduler_type"),
             optimizer=self.optimizer,
-            num_warmup_steps=kwargs.get("num_warmup_steps"),
-            num_training_steps=(kwargs.get("batch_size") * kwargs.get("epochs") * kwargs.get("num_train_epochs")),
+            # num_warmup_steps=0.1 * num_training_steps,
+            num_warmup_steps=5,
+            num_training_steps=num_training_steps,
         )
         
         # self.scheduler = ReduceLROnPlateau(
@@ -164,4 +174,11 @@ class TrainingStrategy(BasePipelineStrategy):
         #     patience = kwargs.get("patience"),
         #     threshold = kwargs.get("threshold"),
         #     verbose = kwargs.get("verbose"),
+        #     num_training_steps = num_training_steps,
         # )
+        
+        print("\n[INFO] Optimizer Arguments:")
+        print(self.optimizer.state_dict())
+        
+        print("\n[INFO] Scheduler Arguments:")
+        print(self.scheduler.state_dict())

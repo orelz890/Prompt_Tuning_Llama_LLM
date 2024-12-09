@@ -68,7 +68,10 @@ class GooglePersonaDatasetProcessor(DatasetProcessor):
         user1_sentences = []
         user2_sentences = []
         
-        for conversation in raw_dataset["Best Generated Conversation"]:
+        for index, conversation in enumerate(raw_dataset["Best Generated Conversation"]):
+            if index > 150:
+                break
+            
             if conversation != None:
                 sentences = conversation.split('\n')
                 
