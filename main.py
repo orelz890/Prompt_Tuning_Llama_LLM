@@ -72,7 +72,7 @@ def main():
                 pipeline.infer(
                     # Change Default Values If Needed
                 )
-            elif action == actions['visualize']:
+            elif action == actions['visualise']:
                 pipeline.visualize(output_dir)
         
         except ValueError as e:
