@@ -3,3 +3,4 @@ local_model/
 __pycache__
 pretrained
 prompt_tuning_results/
+*.txt

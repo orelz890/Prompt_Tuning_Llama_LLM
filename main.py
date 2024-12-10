@@ -23,12 +23,12 @@ def main():
     # Foundational Model Folder Path
     local_model_dir = os.path.join(conf.PATHS["base_local_model_dir"], conf.MODELS["foundational_model"].lower())
     
-    actions = {'exit': 0, 'infer': 1, 'train': 2}
+    actions = {'exit': 0, 'infer': 1, 'train': 2, 'visualize': 3}
     
     while True:
         
         try:
-            action = get_user_action(options="Actions: exit: 0, infer: 1, train: 2", instruction="Enter Action Number", type=int)
+            action = get_user_action(options="Actions: exit: 0, infer: 1, train: 2, visualize: 3", instruction="Enter Action Number", type=int)
             
             # Exit
             if action == actions['exit']:
@@ -72,6 +72,8 @@ def main():
                 pipeline.infer(
                     # Change Default Values If Needed
                 )
+            elif action == actions['visualize']:
+                pipeline.visualize(output_dir)
         
         except ValueError as e:
             print(e)

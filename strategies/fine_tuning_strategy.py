@@ -15,4 +15,4 @@ class FineTuningStrategy(BasePipelineStrategy):
 
     def execute(self):
         print("[INFO] Starting fine-tuning on new dataset.")
-        TrainingStrategy(self.model_manager, self.dataset_path, self.output_dir).execute()
+        # TrainingStrategy(self.model_manager, self.dataset_path, self.output_dir).execute()

@@ -11,7 +11,7 @@ from managers.model_manager import ModelManager
 from strategies.training_strategy import TrainingStrategy
 from strategies.inference_strategy import InferenceStrategy
 from strategies.evaluation_strategy import EvaluationStrategy
-from strategies.visualization_strategy import VisualizationStrategy
+from strategies.visualisation_strategy import VisualizationStrategy
 from strategies.debugging_strategy import DebuggingStrategy
 from strategies.fine_tuning_strategy import FineTuningStrategy 
 
@@ -56,6 +56,10 @@ class PromptTuningPipeline:
             **kwargs
         )
     
+    def visualize(self, output_dir):
+        
+        VisualizationStrategy(output_dir).execute()
+        
     def setup(self, type: str, **kwargs):
         if type == "train":
             
