@@ -4,3 +4,4 @@ __pycache__
 pretrained
 prompt_tuning_results/
 *.txt
+chat_bot_main.py
