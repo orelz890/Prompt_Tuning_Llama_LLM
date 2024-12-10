@@ -1,3 +1,7 @@
+from configuration.config import Config
+
+conf = Config()
+
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -7,82 +11,64 @@ from managers.model_manager import ModelManager
 from strategies.training_strategy import TrainingStrategy
 from strategies.inference_strategy import InferenceStrategy
 from strategies.evaluation_strategy import EvaluationStrategy
-from strategies.visualization_strategy import VisualizationStrategy
+from strategies.visualisation_strategy import VisualizationStrategy
 from strategies.debugging_strategy import DebuggingStrategy
 from strategies.fine_tuning_strategy import FineTuningStrategy 
 
 
 # Pipeline
 class PromptTuningPipeline:
-    def __init__(self, model_name: str,
-                 dataset_path: str, 
-                 output_dir: str, 
-                 device='cpu'):
+    def __init__(self, **kwargs):
         
-        self.model_manager = ModelManager(model_name, device=device)
-        self.dataset_path = dataset_path
-        self.output_dir = output_dir
-        self.device = device
+        args = {**conf.MODELS, "device": conf.DEVICE, **conf.PATHS, **kwargs}
+        
+        self.dataset_path = args.get("dataset_path")
+        self.output_dir = args.get("output_dir")
+        self.device = args.get("device")
+        
+        print(self.dataset_path, self.output_dir,self.device)
+        
+        self.model_manager = ModelManager(args.get("foundational_model"), 
+                                          device = self.device, 
+                                          local_model_dir = args.get("local_model_dir"))
 
-    def train(self, 
-              num_virtual_tokens: int = 100, 
-              lr: float = 5e-5, 
-              per_device_train_batch_size: int = 1,
-              save_steps: int = 500, 
-              eval_steps: int = 100, 
-              save_total_limit: int = 2, 
-              epochs: int = 20
-              ):
-        
-        print("\n====================== load_model_and_tokenizer ======================\n")
-        self.model_manager.load_model_and_tokenizer()
-        
-        print("\n====================== configure_prompt_tuning ======================\n")
-        self.model_manager.configure_prompt_tuning(num_virtual_tokens)
-        
-        print("\n====================== train ======================\n")
-        ts = TrainingStrategy(self.model_manager, self.dataset_path, self.output_dir)
-        ts.execute(lr=lr, 
-                    per_device_train_batch_size=per_device_train_batch_size,
-                    save_steps=save_steps, 
-                    eval_steps=eval_steps, 
-                    save_total_limit=save_total_limit, 
-                    epochs=epochs)
-        print("\n====================== finished training ======================\n")
+    def train(self, dataset_processor, **kwargs):
 
-    def infer(self,
-            max_length: int = 128,
-            temperature: float = 0.7,
-            max_new_tokens: int = 20,
-            top_k=40,
-            top_p=0.9):
+        self.setup(type="train", **kwargs)
         
-        self.model_manager.load_prompt_tuned_model(self.output_dir)
+        ts = TrainingStrategy(
+            model_manager=self.model_manager, 
+            dataset_path=self.dataset_path, 
+            output_dir=self.output_dir,
+            dataset_processor=dataset_processor
+            )
         
-        inf = InferenceStrategy(self.model_manager)
+        ts.execute(**kwargs)
+        
+    def infer(self, model_type="peft", **kwargs):
+        
+        self.setup(type="infer")
+        
+        inf = InferenceStrategy(model_manager=self.model_manager)
+        
         inf.execute(
-            max_length = max_length,
-            temperature = temperature,
-            max_new_tokens = max_new_tokens,
-            top_k=top_k,
-            top_p=top_p
+            model_type=model_type,
+            **kwargs
         )
-
-    def evaluate(self):
-        self.model_manager.load_prompt_tuned_model(self.output_dir)
-        EvaluationStrategy(self.model_manager, self.dataset_path).execute()
-
-    def visualize(self):
-        VisualizationStrategy(f"{self.output_dir}/logs").execute()
-
-    def debug(self):
-        self.model_manager.load_prompt_tuned_model(self.output_dir)
-        DebuggingStrategy(self.model_manager).execute()
-
-    def fine_tune(self, new_dataset_path: str):
-        self.model_manager.load_prompt_tuned_model(self.output_dir)
-        FineTuningStrategy(self.model_manager, new_dataset_path, self.output_dir).execute()
-
-    def to(self, device):
-        self.device = device
-        self.model_manager.device = device
+    
+    def visualize(self, output_dir):
+        
+        VisualizationStrategy(output_dir).execute()
+        
+    def setup(self, type: str, **kwargs):
+        if type == "train":
+            
+            self.model_manager.load_model_and_tokenizer()
+            
+            self.model_manager.configure_prompt_tuning(
+                num_virtual_tokens = kwargs.get("num_virtual_tokens") or conf.TRAIN_HYPER_PARAMETERS["num_virtual_tokens"]
+            )
+        elif type == "infer":
+            self.model_manager.load_prompt_tuned_model(self.output_dir)
+        else:
+            raise ValueError("Invalid PromptTuningPipeline Setup Type")

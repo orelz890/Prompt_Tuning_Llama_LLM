@@ -1,5 +1,10 @@
+from configuration.config import Config
+
+conf = Config()
+
 import os
 import sys
+import torch
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from strategies.base_strategy import BasePipelineStrategy
@@ -13,74 +18,100 @@ warnings.filterwarnings(
     message="Position ids are not supported for parameter efficient tuning. Ignoring position ids."
 )
 
-
-# # Inference Strategy
-# class InferenceStrategy(BasePipelineStrategy):
-#     def __init__(self, model_manager: ModelManager):
-#         self.model_manager = model_manager
-
-#     def execute(self):
-#         print("[INFO] Entering interactive chat mode. Type 'exit' to quit.")
-#         while True:
-#             user_input = input("[USER]: ")
-#             if user_input.lower() in {"exit", "quit"}:
-#                 print("[INFO] Exiting chat.")
-#                 break
-
-#             inputs = self.model_manager.tokenizer(user_input, return_tensors="pt")
-#             outputs = self.model_manager.model.generate(
-#                 input_ids=inputs["input_ids"], do_sample=True, temperature=0.1
-#             )
-#             print(f"[MODEL]: {self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True)}")
-
-
 # Inference Strategy
 class InferenceStrategy(BasePipelineStrategy):
     def __init__(self, model_manager: ModelManager):
         self.model_manager = model_manager
         self.device = model_manager.device
         
-        # Ensure `pad_token_id` is set to a valid token
-        self.model_manager.tokenizer.pad_token = self.model_manager.tokenizer.eos_token or "[PAD]"
-        self.model_manager.tokenizer.pad_token_id = self.model_manager.tokenizer.eos_token_id or self.model_manager.tokenizer.convert_tokens_to_ids("[PAD]")
+        # # Set the models pad token id
+        # self.model_manager.peft_model_prompt.generation_config.pad_token_id = self.model_manager.tokenizer.pad_token_id
 
-        # Update the model configuration
-        self.model_manager.model.config.pad_token_id = self.model_manager.tokenizer.pad_token_id
-        self.model_manager.model.config.eos_token_id = self.model_manager.tokenizer.eos_token_id
-
-    def execute(self, max_length, temperature, max_new_tokens, top_k, top_p):
+    def execute(self, model_type: str, **kwargs):
         print("[INFO] Entering interactive chat mode. Type 'exit' to quit.")
 
-        while True:
-            user_input = input("[USER]: ")
-            if user_input.lower() in {"exit", "quit"}:
-                print("[INFO] Exiting chat.")
-                break
+        args = {**conf.INFER_HYPER_PARAMETERS, **conf.TOKENIZER, **kwargs}
+        
+        with torch.no_grad():
+            while True:
+                user_input = input("\n[USER]: ")
+                if user_input.lower() in {"exit", "quit"}:
+                    print("[INFO] Exiting chat.")
+                    break
+
+                # Tokenize user input with attention mask
+                inputs = self.model_manager.tokenizer(
+                    user_input,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=args.get("max_length")  # Cap input length
+                ).to(self.device)
 
 
-            # Tokenize user input with attention mask
-            inputs = self.model_manager.tokenizer(
-                user_input,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=max_length  # Cap input length
-            ).to(self.device)
+                # Generate output
+                outputs = self.get_outputs(
+                    inputs=inputs,
+                    model_type=model_type,
+                    **args
+                )
+                
+                print(user_input)
+                # Convert input IDs to tokens for the entire batch
+                print(
+                    [
+                        self.model_manager.tokenizer.convert_ids_to_tokens(id)
+                        for input_ids in inputs["input_ids"]
+                        for id in input_ids.tolist()
+                    ],
+                )
 
+                # Convert output IDs to tokens
+                print(
+                    [self.model_manager.tokenizer.convert_ids_to_tokens(id) for id in outputs[0].tolist()],
+                )
 
-            # Generate output with controlled length and sampling
-            outputs = self.model_manager.model.generate(
-                input_ids=inputs["input_ids"],
-                attention_mask=inputs["attention_mask"],  # Provide attention mask
-                do_sample=True,
-                temperature=temperature,  # Adjust temperature for controlled randomness
-                max_new_tokens=max_new_tokens,
-                # repetition_penalty=1.5, # Discourage repeating phrases
-                # length_penalty=1.5, # Penalize very long outputs
-                top_k=top_k,
-                top_p=top_p
-            )
+                # Count total tokens in the generated output
+                total_tokens = outputs.size(1)  # Outputs is of shape (batch_size, seq_length)
 
-            # Decode and print the model's response
-            response = self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            print(f"[MODEL]: {response}")
+                # Count input tokens (optional, if you want new tokens only)
+                input_token_count = inputs["input_ids"].size(1)
+
+                # Count only newly generated tokens
+                new_tokens_count = total_tokens - input_token_count
+
+                print(f"Total tokens in output: {total_tokens}")
+                print(f"Input tokens: {input_token_count}")
+                print(f"Newly generated tokens: {new_tokens_count}")
+
+                # Decode and print the model's response
+                response = self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                print(f"[MODEL]: {response}\n")
+                
+    # this function returns the outputs from the model received, and inputs.
+    def get_outputs(self, inputs, model_type: str, **kwargs):
+        
+        # TODO - handle errors
+        if model_type == "foundational":
+            model = self.model_manager.foundational_model
+        else:
+            model = self.model_manager.peft_model_prompt
+        
+        outputs = model.generate(
+            input_ids= inputs["input_ids"],
+            attention_mask= inputs["attention_mask"],
+            do_sample= kwargs.get("do_sample"),
+            # max_new_tokens= kwargs.get("max_new_tokens"),
+            max_length=kwargs.get("max_tokens_length"),
+            min_length=kwargs.get("min_tokens_length"),
+            length_penalty=kwargs.get("length_penalty"),
+            num_beams=kwargs.get("num_beams"),  # Use beam search
+            temperature= kwargs.get("temperature"),
+            top_p= kwargs.get("top_p"),
+            top_k= kwargs.get("top_k"),
+            repetition_penalty= kwargs.get("repetition_penalty"),  # Avoid repetition.
+            early_stopping= kwargs.get("early_stopping"),  # The model can stop before reach the max_length
+            eos_token_id= self.model_manager.tokenizer.eos_token_id,
+            pad_token_id=self.model_manager.tokenizer.eos_token_id,
+        )
+        return outputs
