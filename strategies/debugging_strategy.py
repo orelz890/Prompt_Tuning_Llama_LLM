@@ -12,15 +12,49 @@ from managers.model_manager import ModelManager
 
 # Debugging Strategy
 class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
+    """
+    A strategy for debugging model outputs at the end of each training epoch.
+    Integrates with the Hugging Face Trainer as a callback.
+
+    Attributes:
+        model: The model being trained or debugged.
+        tokenizer: Tokenizer used for encoding inputs and decoding outputs.
+        device (str): The device (e.g., 'cuda', 'cpu') used for computations.
+    """
+    
     def __init__(self, model, tokenizer, device):
+        """
+        Initialize the DebuggingStrategy with the model, tokenizer, and device.
+
+        Args:
+            model: The model to debug.
+            tokenizer: Tokenizer for processing inputs and outputs.
+            device (str): Device to run computations ('cuda' or 'cpu').
+        """
+        
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
 
     def on_epoch_end(self, args, state, control, **kwargs):
+        """
+        Executes the debugging process at the end of each epoch.
+
+        Args:
+            args: Training arguments.
+            state: Trainer state.
+            control: Trainer control object.
+            **kwargs: Additional arguments.
+        """
+        
         self.execute()
         
     def execute(self):
+        """
+        Perform model debugging by generating outputs for a predefined set of test inputs.
+        Prints the model's predictions, input-output details, and ensures the model
+        is returned to training mode after debugging.
+        """
         
         self.model.eval()
         
@@ -45,7 +79,7 @@ class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
                     eos_token_id= self.tokenizer.eos_token_id,
                     pad_token_id=self.tokenizer.eos_token_id,
                     repetition_penalty=1.5,
-                    length_penalty=5.0,
+                    # length_penalty=5.0,
                     temperature=1,
                     top_p=0.9,
                     top_k=3,

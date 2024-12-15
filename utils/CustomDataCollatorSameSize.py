@@ -3,12 +3,38 @@ import torch
 from typing import Any, Dict, List
 
 class CustomDataCollatorSameSize:
+    """
+    A custom data collator for padding sequences in a batch to the same length.
+    Ensures all `input_ids`, `attention_mask`, and `labels` in the batch are of equal length.
+
+    Attributes:
+        tokenizer (PreTrainedTokenizerBase): The tokenizer used for padding and managing special tokens.
+        device (str): The device (e.g., 'cpu', 'cuda') where tensors will be moved. Default is 'cpu'.
+    """
+    
     def __init__(self, tokenizer: PreTrainedTokenizerBase, device='cpu'):
+        """
+        Initialize the data collator with a tokenizer and device.
+
+        Args:
+            tokenizer (PreTrainedTokenizerBase): The tokenizer used for managing special tokens and padding.
+            device (str): The device for tensor operations ('cpu' or 'cuda'). Default is 'cpu'.
+        """
+        
         self.tokenizer = tokenizer
         self.device = device
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
-                
+        """
+        Collate a batch of features by padding `input_ids`, `attention_mask`, and `labels` to the same length.
+
+        Args:
+            features (List[Dict[str, Any]]): A list of feature dictionaries containing `input_ids` and `labels`.
+
+        Returns:
+            Dict[str, torch.Tensor]: A dictionary containing padded tensors for `input_ids`, `attention_mask`, and `labels`.
+        """
+        
         # Find the maximum length of `input_ids` and `labels` in the batch
         max_length = max(
             max(len(f["input_ids"]) for f in features),

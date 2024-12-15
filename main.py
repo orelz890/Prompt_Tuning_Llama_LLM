@@ -72,7 +72,7 @@ def main():
                 pipeline.infer(
                     # Change Default Values If Needed
                 )
-            elif action == actions['visualise']:
+            elif action == actions['visualize']:
                 pipeline.visualize(output_dir)
         
         except ValueError as e:
@@ -85,15 +85,14 @@ if __name__ == "__main__":
 
 """ 
     TODO:
-    
     1.  [-] Understand why it always generate the max amount - padding data? mask?
     2.  [v] Probably related, fix the warning "Setting `pad_token_id` to `eos_token_id`:128001 for open-end generation."
     3.  [v] Fix GPU out of memory.
-    4.  [-] Talk with Avi about the dataset - get a better one.
+    4.  [v] Talk with Avi about the dataset - get a better one.
     5.  [-] Complete the other strategies.
-    6.  [-] Test the model before training.
-    7.  [-] Test the model after small amount of epochs training.
+    6.  [v] Test the model before training.
+    7.  [v] Test the model after small amount of epochs training.
     8.  [-] Ask Amos if we want a lot of epochs - intentional overfiting?
     9.  [v] Find a smaller chat bot model.
-    10. [-] Dive into the Prompt Engineering part - Read about it and how to use peft lib. 
+    10. [-] Dive into the Prompt Engineering part - Read about it and how to use peft lib.
 """ 

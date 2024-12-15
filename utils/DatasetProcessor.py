@@ -4,15 +4,34 @@ from datasets import load_dataset, DatasetDict
 
 class DatasetProcessor(ABC):
     """
-    Abstract base class for dataset processing. 
+    Abstract base class for dataset processing.
     Requires overriding of `load_dataset`, `preprocess`, and `tokenize_function`.
+
+    Attributes:
+        tokenizer: Tokenizer for processing the dataset.
+        dataset_path (str): Path to the dataset.
+        batch_size (int): Batch size for tokenizing the dataset. Default is 16.
+        test_size (float): Fraction of the dataset reserved for testing. Default is 0.2.
+        seed (int): Random seed for reproducibility. Default is 42.
+        max_length (int): Maximum token length. Default is 512.
     """
 
     def __init__(self, tokenizer, dataset_path, **kwargs):
-        
         """
+        Initialize the DatasetProcessor.
+
+        Args:
+            tokenizer: Tokenizer for processing the dataset.
+            dataset_path (str): Path to the dataset to be loaded.
+            
+            **kwargs: Additional parameters for dataset processing, including:
+                - batch_size (int): Batch size for tokenizing. Default is 16.
+                - test_size (float): Fraction of the dataset reserved for testing. Default is 0.2.
+                - seed (int): Random seed for reproducibility. Default is 42.
+                - max_length (int): Maximum token length. Default is 512.
+
         Raises:
-            ValueError: Must provide a tokenizer and a dataset_path
+            ValueError: If `tokenizer` or `dataset_path` is not provided.
         """
         
         self.dataset_path = dataset_path
@@ -26,9 +45,12 @@ class DatasetProcessor(ABC):
 
     def load_dataset(self) -> DatasetDict:
         """
-        Load the dataset.
-        Default using Hugging Face's `load_dataset`.
+        Load the dataset using Hugging Face's `load_dataset`.
+
+        Returns:
+            DatasetDict: Loaded dataset.
         """
+        
         print(f"[INFO] Loading dataset from {self.dataset_path}")
         return load_dataset(self.dataset_path)
 
@@ -37,14 +59,25 @@ class DatasetProcessor(ABC):
     def tokenize_function(self, examples):
         """
         Tokenization logic. Must be implemented by subclasses.
+
+        Args:
+            examples: Batch of dataset examples to tokenize.
+
+        Returns:
+            Tokenized examples.
         """
+        
         pass
 
     
     def train_eval_test_split(self):
         """
-        Split the dataset: split into train, eval, and test using train_test_split func.
+        Split the dataset into train, evaluation, and test sets.
+
+        Returns:
+            tuple: Train, evaluation, and test datasets.
         """
+        
         dataset = self.load_dataset()
         
         # Split into train (80%), eval (16%), and test (4%)
@@ -63,18 +96,25 @@ class DatasetProcessor(ABC):
     
     def get_datasets(self, raw_dataset):
         """
-            Change your dataset structure here if needed before mapping
+        Adjust dataset structure if needed before mapping.
+        Processes raw datasets to extract user conversations and structure them
+        into input-output sentence pairs.
+
+        Args:
+            raw_dataset: The raw dataset containing user conversations.
+
+        Returns:
+            Dataset: A structured dataset with input and target sentences.
         """
+        
         return raw_dataset
     
     def preprocess(self):
         """
-        Uses train_eval_test_split and tokenize_function to prepare and tokenize the data
-        
+        Preprocess the dataset by splitting into train, eval, and test sets, and then tokenizing them.
+
         Returns:
-            tokenized_train_dataset: DatasetDict
-            tokenized_eval_dataset:  DatasetDict
-            tokenized_test_dataset:  DatasetDict
+            tuple: Tokenized train, eval, and test datasets.
         """
 
         print("[INFO] Preprocessing dataset...")

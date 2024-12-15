@@ -9,27 +9,44 @@ from datasets import load_dataset, DatasetDict, Dataset
 from utils.DatasetProcessor import DatasetProcessor
 
 class GooglePersonaDatasetProcessor(DatasetProcessor):
+    """
+    A dataset processor for the Google Persona Chat dataset.
+    Overrides the methods from the DatasetProcessor base class to handle dataset-specific
+    tokenization and preprocessing logic.
 
+    Methods:
+        train_eval_test_split: Overrides to split the dataset into train, validation, and test sets.
+        tokenize_function: Overrides to tokenize input and target sentences.
+        get_datasets: Overrides to process raw datasets and extract user conversations.
+    """
+    
     def train_eval_test_split(self):
+        """
+        Overrides DatasetProcessor.train_eval_test_split.
+        Splits the dataset into train, validation, and test sets.
+
+        Returns:
+            tuple: Train, validation, and test datasets.
+        """
+        
         dataset = self.load_dataset()
         print(len(dataset["train"]))
         return dataset["train"], dataset["validation"], dataset["test"]
         
     def tokenize_function(self, examples):
         """
-        Tokenization logic for a specific dataset.
-        """
+        Overrides DatasetProcessor.tokenize_function.
+        Tokenization logic for the Google Persona Chat dataset.
 
-        # print("conv: ", examples["input_sentences"])
-        
+        Args:
+            examples: A batch of dataset examples containing input and target sentences.
+
+        Returns:
+            dict: Tokenized inputs and labels.
+        """
 
         user1_sentences = examples["input_sentences"]
         user2_sentences = examples["target_sentences"]
-        
-        # print("conv: ", type(examples["Best Generated Conversation"][0]))
-
-        # print("len(user1_sentences): ", len(user1_sentences))
-        # print("len(user2_sentences): ", len(user2_sentences))
 
         # Tokenize inputs (questions)
         inputs = self.tokenizer(
@@ -49,21 +66,22 @@ class GooglePersonaDatasetProcessor(DatasetProcessor):
 
         # Add labels to inputs
         inputs["labels"] = labels
-        
-        
-        # print("Length of tokenized inputs:", len(inputs["input_ids"]))
-        # print("Length of tokenized labels:", len(labels))
-        
-        
-        # import sys
-        # sys.stdout.flush()
-        
-        # raise("stop here")
     
         return inputs
 
     
     def get_datasets(self, raw_dataset):
+        """
+        Overrides DatasetProcessor.get_datasets.
+        Processes raw datasets to extract user conversations and structure them
+        into input-output sentence pairs.
+
+        Args:
+            raw_dataset: The raw dataset containing user conversations.
+
+        Returns:
+            Dataset: A structured dataset with input and target sentences.
+        """
         
         user1_sentences = []
         user2_sentences = []
