@@ -23,24 +23,56 @@ from utils.CustomDataCollatorSameSize import CustomDataCollatorSameSize
 
 # Training Strategy
 class TrainingStrategy(BasePipelineStrategy):
+    """
+    A strategy for training prompt-tuned using a preprocessed dataset
+    and customizable training configurations.
+
+    Attributes:
+        model_manager (ModelManager): Manages the foundational or prompt-tuned model.
+        dataset_path (str): Path to the training dataset.
+        output_dir (str): Directory for saving the model outputs and checkpoints.
+        dataset_processor (Type[DatasetProcessor]): Processor for preparing datasets.
+        train_dataset: Training dataset.
+        test_dataset: Testing dataset.
+        optimizer: Optimizer used during training.
+        scheduler: Scheduler for adjusting the learning rate.
+        data_collator: Collator for dynamic data padding during training.
+        device (str): The device (e.g., 'cuda', 'cpu') used for computations.
+    """
+    
     def __init__(self, model_manager: ModelManager,
                  dataset_path: str,
                  output_dir: str,
                  dataset_processor: Type[DatasetProcessor] # Reference
                  ):
+        """
+        Initialize the training strategy with model manager, dataset path, and output configurations.
+
+        Args:
+            model_manager (ModelManager): Handles the model and tokenizer.
+            dataset_path (str): Path to the dataset used for training.
+            output_dir (str): Directory for saving outputs and checkpoints.
+            dataset_processor (Type[DatasetProcessor]): Processor class for preparing datasets.
+        """
         
         self.model_manager = model_manager
         self.dataset_path = dataset_path
         self.output_dir = output_dir
+        self.device = model_manager.device
+        self.dataset_processor = dataset_processor
         self.train_dataset = None
         self.test_dataset = None
         self.optimizer = None
         self.scheduler = None
         self.data_collator = None
-        self.device = model_manager.device
-        self.dataset_processor = dataset_processor
 
     def preprocess_dataset(self, **kwargs) -> tuple:
+        """
+        Preprocesses the dataset for training and evaluation.
+
+        Returns:
+            tuple: Preprocessed train, evaluation, and test datasets.
+        """
         
         # Processes the batches of data for input into the model.
         self.data_collator = CustomDataCollatorSameSize( 
@@ -56,25 +88,39 @@ class TrainingStrategy(BasePipelineStrategy):
         return dp.preprocess()
 
     def execute(self, **kwargs):
+        """
+        Execute the training process, including dataset preparation, trainer initialization, and training.
+
+        Args:
+            **kwargs: Additional training configurations, including:
+
+                DATASET:
+                - batch_size (int): Batch size for training and evaluation. Default is 16.
+                - seed (int): Random seed for reproducibility. Default is 42.
+                - test_size (float): Fraction of the dataset to use for testing. Default is 0.2.
+
+                DATA_PATH:
+                - dataset_path (str): Path to the dataset. Default is "google/Synthetic-Persona-Chat".
+
+                TOKENIZER:
+                - max_length (int): Maximum tokenization length. Default is 512.
+
+        """
+        
         print("[INFO] Starting training...")
         
-        # Merge defaults with provided kwargs
-        args = {**conf.TRAIN_HYPER_PARAMETERS, **conf.SCHEDULER, **conf.OPTIMIZER, **conf.DATASET, **kwargs}
-          
         # Prepare the datasets
         train_dataset, eval_dataset,_= self.preprocess_dataset(
             **{**conf.DATA_PATH, **conf.DATASET, **conf.TOKENIZER}
         )
-        
-        # print(len(train_dataset))
-        
+                
         # Training args
-        training_args = self.create_training_arguments( **args)
+        training_args = self.create_training_arguments( **kwargs)
         
         # Initialize optimizer and scheduler
-        self.setup_optimizer_and_scheduler(data_size=len(train_dataset), **args)
+        self.setup_optimizer_and_scheduler(data_size=len(train_dataset), **kwargs)
         
-        # Trainer
+        # Train
         trainer = self.create_trainer(
             training_args=training_args,
             train_dataset=train_dataset,
@@ -84,6 +130,7 @@ class TrainingStrategy(BasePipelineStrategy):
         
         trainer.train()
 
+        # Save the trained model
         self.model_manager.save_model(
             output_dir=self.output_dir,
             model_type="peft"
@@ -91,8 +138,19 @@ class TrainingStrategy(BasePipelineStrategy):
         print("[INFO] Finished Training...")
         
 
-
     def create_trainer(self, training_args, train_dataset, eval_dataset, data_collator):
+        """
+        Creates a Hugging Face Trainer instance for managing the training loop.
+
+        Args:
+            training_args (TrainingArguments): Training configuration.
+            train_dataset: Dataset used for training.
+            eval_dataset: Dataset used for evaluation.
+            data_collator: Collator for handling data padding.
+
+        Returns:
+            Trainer: A configured Trainer instance.
+        """
         
         # Add the custom callback
         test_callback = DebuggingStrategy(
@@ -102,7 +160,7 @@ class TrainingStrategy(BasePipelineStrategy):
         )
         
         trainer = Trainer(
-            model=self.model_manager.peft_model_prompt,  # We pass in the PEFT version of the foundation model, bloomz-560M
+            model=self.model_manager.peft_model_prompt,  # We pass in the PEFT version of the foundation model
             args=training_args,  # The args for the training.
             train_dataset=train_dataset,  # The dataset used to tyrain the model.
             eval_dataset=eval_dataset,
@@ -114,6 +172,15 @@ class TrainingStrategy(BasePipelineStrategy):
         return trainer
 
     def create_training_arguments(self, **kwargs):
+        """
+        Create training arguments using Hugging Face's TrainingArguments.
+
+        Args:
+            **kwargs: Additional training configurations.
+
+        Returns:
+            TrainingArguments: Configured training arguments.
+        """
         
         training_args = TrainingArguments(
             output_dir=self.output_dir,  # Where the model predictions and checkpoints will be written
@@ -143,8 +210,13 @@ class TrainingStrategy(BasePipelineStrategy):
 
     def setup_optimizer_and_scheduler(self, data_size, **kwargs):
         """
-        Initializes the Adam optimizer and ReduceLROnPlateau scheduler.
+        Initializes the optimizer and learning rate scheduler.
+
+        Args:
+            data_size (int): Size of the training dataset.
+            **kwargs: Additional configurations for optimizer and scheduler.
         """
+        
         if self.optimizer is None:
             # self.optimizer = Adam(self.model_manager.peft_model_prompt.parameters(), lr=lr)
             optimizer_grouped_parameters = [

@@ -10,27 +10,56 @@ from peft import PromptTuningConfig, get_peft_model, PeftModel, TaskType, Prompt
 
 
 class ModelManager:
+    """
+    A manager for handling foundational and prompt-tuned models, including loading, saving,
+    and configuring models for prompt tuning tasks.
+
+    Attributes:
+        model_name (str): Name of the foundational model.
+        local_model_dir (str): Directory for saving/loading local models.
+        foundational_model: The base model used for tasks.
+        peft_model_prompt: Prompt-tuned model.
+        tokenizer: Tokenizer for preprocessing inputs and outputs.
+        prompt_config: Configuration for prompt tuning.
+        device (str): The device (e.g., 'cuda', 'cpu') used for computations.
+    """
+    
     def __init__(self, model_name: str, local_model_dir: str = "./local_model", device='cpu'):
+        """
+        Initialize the ModelManager.
+
+        Args:
+            model_name (str): Name of the foundational model.
+            local_model_dir (str): Directory for saving/loading local models. Default is "./local_model".
+            device (str): The device for computation ('cpu' or 'cuda'). Default is 'cpu'.
+        """
+        
         self.model_name = model_name
         self.local_model_dir = local_model_dir
+        self.device = device
         self.foundational_model = None
         self.peft_model_prompt = None
         self.tokenizer = None
         self.prompt_config = None
-        self.device = device
         
         # Ensure the local model directory exists
         os.makedirs(self.local_model_dir, exist_ok=True)
 
     def load_model_and_tokenizer(self):
+        """
+        Load the foundational model and tokenizer, either from a local directory or the Hugging Face Hub.
+        """
+        
         print(f"[INFO] Loading The Foundational Model")
 
         if os.path.exists(os.path.join(self.local_model_dir, "config.json")):
+            # Load from local dir is exists
             print(f"[INFO] Loading model and tokenizer from local directory: {self.local_model_dir}")
             self.tokenizer = AutoTokenizer.from_pretrained(self.local_model_dir)
             self.foundational_model = AutoModelForCausalLM.from_pretrained(self.local_model_dir, trust_remote_code=True).to(self.device)
+        
         else:
-            # Hugging Face
+            # Download from Hugging Face
             login(token=conf.API_KEYS.get("hugging_token"))
             
             print(f"[INFO] Downloading model and tokenizer: {self.model_name}")
@@ -43,6 +72,7 @@ class ModelManager:
                 model_type="foundational"
             )
         
+        # TODO - Check if setting the pad id to the eos is fine?
         # Ensure the tokenizer has padding tokens for input and output
         if self.tokenizer.pad_token is None or self.model_manager.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token or "[PAD]"
@@ -50,12 +80,14 @@ class ModelManager:
             self.foundational_model.resize_token_embeddings(len(self.tokenizer))  # Resize embeddings if new tokens are added
             print(f"[INFO] Padding token set to: {self.tokenizer.pad_token}")
 
-        
-    #    # Set the model configuration tokens
-    #     self.foundational_model.config.pad_token_id = self.tokenizer.pad_token_id
-    #     self.foundational_model.config.eos_token_id = self.tokenizer.eos_token_id
-
     def configure_prompt_tuning(self, num_virtual_tokens):
+        """
+        Configure the foundational model for prompt tuning.
+
+        Args:
+            num_virtual_tokens (int): Number of virtual tokens for prompt tuning.
+        """
+        
         print(f"[INFO] Configuring Prompt Tuning with {num_virtual_tokens} virtual tokens.")
         
         # TODO - Read about it
@@ -69,6 +101,13 @@ class ModelManager:
         self.peft_model_prompt = get_peft_model(self.foundational_model, self.prompt_config)
 
     def load_prompt_tuned_model(self, output_dir: str):
+        """
+        Load a pretrained prompt-tuned model from a specified directory.
+
+        Args:
+            output_dir (str): Directory containing the prompt-tuned model.
+        """
+        
         print(f"[INFO] Loading prompt-tuned model from {output_dir}")
         self.tokenizer = AutoTokenizer.from_pretrained(output_dir)
         
@@ -85,12 +124,17 @@ class ModelManager:
             is_trainable=False,
         ).to(self.device)
 
-        
+    
     def save_model(self, output_dir: str, model_type: str):
         """
         Save the specified model and tokenizer.
+
         Args:
-            model_type (str): "foundational" or "peft"
+            output_dir (str): Directory to save the model and tokenizer.
+            model_type (str): Type of model to save ('foundational' or 'peft').
+
+        Raises:
+            ValueError: If the specified model type is invalid or not initialized.
         """
         
         print(f"[INFO] Saving trained model to {output_dir}")
