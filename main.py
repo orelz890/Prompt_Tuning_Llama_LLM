@@ -9,7 +9,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from pipeline.prompt_tuning_pipeline import PromptTuningPipeline
 from utils.Aviman1DatasetProcessor import Aviman1DatasetProcessor
 from utils.GooglePersonaDatasetProcessor import GooglePersonaDatasetProcessor
+from transformers import AutoModelForCausalLM, AutoTokenizer, BlenderbotForConditionalGeneration, AutoModelForSeq2SeqLM
 
+
+
+actions = {'exit': 0, 'infer': 1, 'train': 2, 'visualize': 3}
+foundational_models = {'facebook_400M': 1, 'other': 2}
+
+from transformers import BlenderbotForConditionalGeneration
+
+class BlenderbotWithEmbeds(BlenderbotForConditionalGeneration):
+    def forward(self, input_ids=None, inputs_embeds=None, **kwargs):
+        if inputs_embeds is not None and input_ids is not None:
+            raise ValueError("You cannot specify both `input_ids` and `inputs_embeds`.")
+        return super().forward(input_ids=input_ids, inputs_embeds=inputs_embeds, **kwargs)
 
 def get_user_action(instruction, options = None, type = int):
     if options:
@@ -17,41 +30,57 @@ def get_user_action(instruction, options = None, type = int):
     
     return type(input(f"[{instruction}]: "))
 
+def get_required_info_from_user():
+    # action = get_user_action(options="Actions: exit: 0, infer: 1, train: 2, visualize: 3", instruction="Enter Action Number", type=int)
+    
+    # # Exit
+    # if action == actions['exit']:
+    #     exit(0)
+        
+    # # User Input - Output Folder 
+    # prompt_model_name = get_user_action(instruction="Enter your prompt model name", type=str)
+    
+    # # Foundational Model
+    # foundational_model_name = get_user_action(instruction="Enter the foundational model path like: facebook/blenderbot-400M-distill", type=str)
+    
+    # dataset_name = get_user_action(instruction="Enter the dataset path like: google/Synthetic-Persona-Chat", type=str)
+    
+    # return action, prompt_model_name.lower(), foundational_model_name, dataset_name
+
+    return 2, "orel3", "facebook/blenderbot-400M-distill", "google/Synthetic-Persona-Chat"
+
+def get_auto_model_for_specific_llm(foundational_model_name):
+    if foundational_model_name == "facebook/blenderbot-400M-distill":
+        print("Using: BlenderbotWithEmbeds")
+        return BlenderbotWithEmbeds
+    else:
+        print("Using: AutoModelForCausalLM")
+        return AutoModelForCausalLM
 
 def main():
     
-    # Foundational Model Folder Path
-    local_model_dir = os.path.join(conf.PATHS["base_local_model_dir"], conf.MODELS["foundational_model"].lower())
-    
-    actions = {'exit': 0, 'infer': 1, 'train': 2, 'visualize': 3}
-    
-    while True:
+    flag = True
+    while flag:
+        flag = False
         
         try:
-            action = get_user_action(options="Actions: exit: 0, infer: 1, train: 2, visualize: 3", instruction="Enter Action Number", type=int)
+            action, prompt_model_name, foundational_model_name, dataset_name = get_required_info_from_user()
             
-            # Exit
-            if action == actions['exit']:
-                return
-            
-            # Invalid Input
-            if not isinstance(action, int) or action not in actions.values():
-                print("Invalid action number.")
-                continue
-            
-            # User Input - Output Folder 
-            subfolder_name = get_user_action(instruction="Enter model name", type=str)
-            
+            # Foundational Model Folder Path
+            local_model_dir = os.path.join(conf.PATHS["base_local_model_dir"], foundational_model_name.lower())
+
             # Output Dir Path
-            output_dir = os.path.join(conf.PATHS["base_output_dir"], conf.MODELS["foundational_model"].lower(), subfolder_name.lower())
+            output_dir = os.path.join(conf.PATHS["base_output_dir"], foundational_model_name.lower(), prompt_model_name.lower())
 
             
             pipeline: PromptTuningPipeline = PromptTuningPipeline(
-                model_name=conf.MODELS["foundational_model"],
-                dataset_path=conf.DATA_PATH["dataset_path"],
-                output_dir=output_dir,
-                local_model_dir=local_model_dir,
-                device=conf.DEVICE
+                model_name = foundational_model_name,
+                dataset_path = dataset_name,
+                output_dir = output_dir,
+                local_model_dir = local_model_dir,
+                device = conf.DEVICE,
+                auto_tokenizer = AutoTokenizer,
+                auto_model = get_auto_model_for_specific_llm(foundational_model_name)
             )
             
             if action == actions['train']:
@@ -64,7 +93,6 @@ def main():
                     # Change Default Values If Needed. Example:
                     # epochs=5
                     # dataset_processor = Aviman1DatasetProcessor
-                    dataset_processor = GooglePersonaDatasetProcessor
                 )
 
             elif action == actions['infer']:
@@ -95,4 +123,9 @@ if __name__ == "__main__":
     8.  [-] Ask Amos if we want a lot of epochs - intentional overfiting?
     9.  [v] Find a smaller chat bot model.
     10. [-] Dive into the Prompt Engineering part - Read about it and how to use peft lib.
+    
+    
+    11. why is he repeating the input?
+    12. Try to use a more suitable model?
+     
 """ 

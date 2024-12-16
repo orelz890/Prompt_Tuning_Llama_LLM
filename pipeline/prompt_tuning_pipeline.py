@@ -15,6 +15,9 @@ from strategies.visualization_strategy import VisualizationStrategy
 from strategies.debugging_strategy import DebuggingStrategy
 from strategies.fine_tuning_strategy import FineTuningStrategy 
 
+from utils.Aviman1DatasetProcessor import Aviman1DatasetProcessor
+from utils.GooglePersonaDatasetProcessor import GooglePersonaDatasetProcessor
+
 
 # Pipeline
 class PromptTuningPipeline:
@@ -51,11 +54,14 @@ class PromptTuningPipeline:
         
         print("\n Using: \n", self.dataset_path, self.output_dir, self.device)
         
-        self.model_manager = ModelManager(args.get("foundational_model"), 
+        self.model_manager = ModelManager(model_name = args.get("foundational_model"), 
                                           device = self.device, 
-                                          local_model_dir = args.get("local_model_dir"))
+                                          local_model_dir = args.get("base_local_model_dir"),
+                                          auto_tokenizer = args.get("auto_tokenizer"),
+                                          auto_model = args.get("auto_model")
+                                          )
 
-    def train(self, dataset_processor, strategy_class=TrainingStrategy, **kwargs):
+    def train(self, strategy_class=TrainingStrategy, **kwargs):
 
         """
         Execute the training process for prompt tuning.
@@ -105,7 +111,7 @@ class PromptTuningPipeline:
             model_manager=self.model_manager, 
             dataset_path=self.dataset_path, 
             output_dir=self.output_dir,
-            dataset_processor=dataset_processor
+            dataset_processor=self.get_specific_data_processor()
             )
 
         train_strategy.execute(**args)
@@ -182,3 +188,15 @@ class PromptTuningPipeline:
             self.model_manager.load_prompt_tuned_model(self.output_dir)
         else:
             raise ValueError("Invalid PromptTuningPipeline Setup Type")
+    
+    def get_specific_data_processor(self):
+    
+        if self.dataset_path == "google/Synthetic-Persona-Chat":
+            return GooglePersonaDatasetProcessor
+        
+        elif self.dataset_path == "Aviman1/Bot_Human_Prompt_Tuning_Dataset":
+            return Aviman1DatasetProcessor
+
+        else:
+            raise ValueError("You need to implement a data processor for your specific dataset that extends DataProcessor")
+    

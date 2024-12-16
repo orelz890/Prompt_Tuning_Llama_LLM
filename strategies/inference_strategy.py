@@ -24,9 +24,6 @@ class InferenceStrategy(BasePipelineStrategy):
         self.model_manager = model_manager
         self.device = model_manager.device
         
-        # # Set the models pad token id
-        # self.model_manager.peft_model_prompt.generation_config.pad_token_id = self.model_manager.tokenizer.pad_token_id
-
     def execute(self, model_type: str, **kwargs):
         """
         Execute the inference process in an interactive chat mode.
@@ -120,7 +117,7 @@ class InferenceStrategy(BasePipelineStrategy):
             repetition_penalty= kwargs.get("repetition_penalty"),  # Avoid repetition.
             early_stopping= kwargs.get("early_stopping"),  # The model can stop before reach the max_length
             eos_token_id= self.model_manager.tokenizer.eos_token_id,
-            pad_token_id=self.model_manager.tokenizer.eos_token_id,
+            pad_token_id=self.model_manager.tokenizer.pad_token_id,
         )
         return outputs
     

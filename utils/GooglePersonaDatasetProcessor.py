@@ -87,7 +87,7 @@ class GooglePersonaDatasetProcessor(DatasetProcessor):
         user2_sentences = []
         
         for index, conversation in enumerate(raw_dataset["Best Generated Conversation"]):
-            if index > 150:
+            if index > 10:
                 break
             
             if conversation != None:

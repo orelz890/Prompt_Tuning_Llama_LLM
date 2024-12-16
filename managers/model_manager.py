@@ -5,8 +5,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from configuration.config import Config as conf
 from huggingface_hub import login
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PromptTuningConfig, get_peft_model, PeftModel, TaskType, PromptTuningInit
+from transformers import AutoModelForCausalLM, AutoTokenizer, BlenderbotForConditionalGeneration, AutoModelForSeq2SeqLM
+from peft import PromptTuningConfig, get_peft_model, PeftModel, TaskType, PromptTuningInit, LoraConfig
+
 
 
 class ModelManager:
@@ -24,7 +25,13 @@ class ModelManager:
         device (str): The device (e.g., 'cuda', 'cpu') used for computations.
     """
     
-    def __init__(self, model_name: str, local_model_dir: str = "./local_model", device='cpu'):
+    def __init__(self,
+                auto_tokenizer,
+                auto_model,
+                model_name: str, 
+                local_model_dir: str = "./local_model", 
+                device='cpu', 
+                ):
         """
         Initialize the ModelManager.
 
@@ -37,6 +44,11 @@ class ModelManager:
         self.model_name = model_name
         self.local_model_dir = local_model_dir
         self.device = device
+        self.auto_tokenizer = auto_tokenizer
+        self.auto_model = auto_model
+        
+        print("Model_manager - auto_model: ", auto_model)
+        
         self.foundational_model = None
         self.peft_model_prompt = None
         self.tokenizer = None
@@ -50,21 +62,21 @@ class ModelManager:
         Load the foundational model and tokenizer, either from a local directory or the Hugging Face Hub.
         """
         
-        print(f"[INFO] Loading The Foundational Model")
+        print(f"[INFO] Loading The Foundational Model: ", os.path.join(self.local_model_dir, self.model_name))
 
-        if os.path.exists(os.path.join(self.local_model_dir, "config.json")):
+        if os.path.exists(os.path.join(self.local_model_dir, self.model_name)):
             # Load from local dir is exists
             print(f"[INFO] Loading model and tokenizer from local directory: {self.local_model_dir}")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.local_model_dir)
-            self.foundational_model = AutoModelForCausalLM.from_pretrained(self.local_model_dir, trust_remote_code=True).to(self.device)
+            self.tokenizer = self.auto_tokenizer.from_pretrained(self.local_model_dir)
+            self.foundational_model = self.auto_model.from_pretrained(self.local_model_dir).to(self.device)
         
         else:
             # Download from Hugging Face
             login(token=conf.API_KEYS.get("hugging_token"))
             
             print(f"[INFO] Downloading model and tokenizer: {self.model_name}")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.foundational_model = AutoModelForCausalLM.from_pretrained(self.model_name, trust_remote_code=True).to(self.device)
+            self.tokenizer = self.auto_tokenizer.from_pretrained(self.model_name)
+            self.foundational_model = self.auto_model.from_pretrained(self.model_name).to(self.device)
             
             # Save pretrained chat bot model locally
             self.save_model( 
@@ -74,11 +86,13 @@ class ModelManager:
         
         # TODO - Check if setting the pad id to the eos is fine?
         # Ensure the tokenizer has padding tokens for input and output
-        if self.tokenizer.pad_token is None or self.model_manager.tokenizer.pad_token_id is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token or "[PAD]"
-            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id or self.tokenizer.convert_tokens_to_ids("[PAD]")
+        if self.tokenizer.pad_token is None or self.tokenizer.pad_token_id is None:
+            # self.tokenizer.pad_token = self.tokenizer.eos_token or "[PAD]"
+            # self.tokenizer.pad_token_id = self.tokenizer.eos_token_id or self.tokenizer.convert_tokens_to_ids("[PAD]")
+            self.tokenizer.pad_token = "[PAD]"
+            self.tokenizer.pad_token_id = self.tokenizer.convert_tokens_to_ids("[PAD]")
             self.foundational_model.resize_token_embeddings(len(self.tokenizer))  # Resize embeddings if new tokens are added
-            print(f"[INFO] Padding token set to: {self.tokenizer.pad_token}")
+            print(f"[INFO] Padding token set to: {self.tokenizer.pad_token}. token_id: {self.tokenizer.pad_token_id}")
 
     def configure_prompt_tuning(self, num_virtual_tokens):
         """
@@ -92,7 +106,8 @@ class ModelManager:
         
         # TODO - Read about it
         self.prompt_config = PromptTuningConfig( 
-            task_type=TaskType.CAUSAL_LM,  # This type indicates the model will generate text. 
+            # task_type=TaskType.CAUSAL_LM,  # This type indicates the model will generate text. 
+            task_type=TaskType.SEQ_2_SEQ_LM,  # This type indicates the model will generate text. 
             prompt_tuning_init=PromptTuningInit.RANDOM,  # The added virtual tokens are initializad with random numbers
             num_virtual_tokens=num_virtual_tokens,
             tokenizer_name_or_path=self.model_name,  # The pre-trained model.
@@ -109,10 +124,10 @@ class ModelManager:
         """
         
         print(f"[INFO] Loading prompt-tuned model from {output_dir}")
-        self.tokenizer = AutoTokenizer.from_pretrained(output_dir)
+        self.tokenizer = self.auto_tokenizer.from_pretrained(output_dir)
         
         # Foundational model
-        self.foundational_model = AutoModelForCausalLM.from_pretrained(
+        self.foundational_model = self.auto_model.from_pretrained(
             self.local_model_dir
         ).to(self.device)
         
