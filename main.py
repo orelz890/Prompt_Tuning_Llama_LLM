@@ -47,7 +47,7 @@ def get_required_info_from_user():
     
     # return action, prompt_model_name.lower(), foundational_model_name, dataset_name
 
-    model_name = "llama_avi_1b_64vt_100e_1"
+    model_name = "llama_avi_1b_64vt_100e_5"
     # return 1, model_name, "facebook/blenderbot-400M-distill", "google/Synthetic-Persona-Chat"
     # return 2, model_name, "facebook/blenderbot-400M-distill", "google/Synthetic-Persona-Chat"
     # return 3, model_name, "facebook/blenderbot-400M-distill", "google/Synthetic-Persona-Chat"
@@ -57,8 +57,8 @@ def get_required_info_from_user():
     # return 3, model_name, "facebook/blenderbot-400M-distill", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
     
     # return 1, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
-    return 2, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
-    # return 3, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
+    # return 2, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
+    return 3, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
 
 def get_auto_model_for_specific_llm(foundational_model_name):
     taskType = TaskType.CAUSAL_LM

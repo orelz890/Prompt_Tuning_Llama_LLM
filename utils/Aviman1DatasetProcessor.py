@@ -30,7 +30,7 @@ class Aviman1DatasetProcessor(DatasetProcessor):
         """
             
         # Convert questions and answers to strings
-        questions = [str(q) for q in examples["Questions"]]
+        questions = ["[User]: " + str(q) + "\n[MODEL]: " for q in examples["Questions"]]
         answers = [str(a) for a in examples["Answers"]]
         
 
