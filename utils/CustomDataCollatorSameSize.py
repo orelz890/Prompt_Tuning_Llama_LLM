@@ -34,7 +34,7 @@ class CustomDataCollatorSameSize:
         Returns:
             Dict[str, torch.Tensor]: A dictionary containing padded tensors for `input_ids`, `attention_mask`, and `labels`.
         """
-        
+                      
         # Find the maximum length of `input_ids` and `labels` in the batch
         max_length = max(
             max(len(f["input_ids"]) for f in features),

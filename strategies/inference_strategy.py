@@ -106,16 +106,16 @@ class InferenceStrategy(BasePipelineStrategy):
             input_ids= inputs["input_ids"],
             attention_mask= inputs["attention_mask"],
             do_sample= kwargs.get("do_sample"),
-            # max_new_tokens= kwargs.get("max_new_tokens"),
-            max_length=kwargs.get("max_tokens_length"),
-            min_length=kwargs.get("min_tokens_length"),
-            length_penalty=kwargs.get("length_penalty"),
-            num_beams=kwargs.get("num_beams"),  # Use beam search
+            max_new_tokens= kwargs.get("max_new_tokens"),
+            # max_length=kwargs.get("max_tokens_length"),
+            # min_length=kwargs.get("min_tokens_length"),
+            # length_penalty=kwargs.get("length_penalty"),
+            # num_beams=kwargs.get("num_beams"),  # Use beam search
             temperature= kwargs.get("temperature"),
             top_p= kwargs.get("top_p"),
             top_k= kwargs.get("top_k"),
             repetition_penalty= kwargs.get("repetition_penalty"),  # Avoid repetition.
-            early_stopping= kwargs.get("early_stopping"),  # The model can stop before reach the max_length
+            # early_stopping= kwargs.get("early_stopping"),  # The model can stop before reach the max_length
             eos_token_id= self.model_manager.tokenizer.eos_token_id,
             pad_token_id=self.model_manager.tokenizer.pad_token_id,
         )

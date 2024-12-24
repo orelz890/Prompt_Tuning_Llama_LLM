@@ -28,10 +28,11 @@ class Aviman1DatasetProcessor(DatasetProcessor):
         Returns:
             dict: Tokenized inputs and labels.
         """
-        
+            
         # Convert questions and answers to strings
-        questions = [str(q) if q is not None else "" for q in examples["Questions"]]
-        answers = [str(a) if a is not None else "" for a in examples["Answers"]]
+        questions = [str(q) for q in examples["Questions"]]
+        answers = [str(a) for a in examples["Answers"]]
+        
 
         # Tokenize inputs (questions)
         inputs = self.tokenizer(
@@ -52,3 +53,19 @@ class Aviman1DatasetProcessor(DatasetProcessor):
         # Add labels to inputs
         inputs["labels"] = labels
         return inputs
+
+    def load_dataset(self):
+        """
+        Load the dataset using Hugging Face's `load_dataset`.
+
+        Returns:
+            DatasetDict: Loaded dataset.
+        """
+        
+        print(f"[INFO] Loading dataset from {self.dataset_path}")
+        dataset = load_dataset(self.dataset_path)
+
+        # Drop the 'Unnamed: 2' column
+        dataset = dataset.remove_columns(['Unnamed: 2'])
+
+        return self.clean_dataset(dataset=dataset)

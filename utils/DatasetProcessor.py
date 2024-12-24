@@ -42,6 +42,25 @@ class DatasetProcessor(ABC):
         self.seed = kwargs.get("seed", 42)
         self.max_length = kwargs.get("max_length", 512)
         
+    # Make static?
+    def clean_dataset(self, dataset):
+        """
+        Clean the dataset here if necessary
+
+        Returns:
+            DatasetDict: Loaded dataset.
+        """
+        # Define a function to filter out rows with null values
+        def remove_null_rows(example):
+            return all(value is not None for value in example.values())
+
+        # Apply the filter to remove rows with nulls for each split
+        filtered_dataset = {
+            split: data.filter(remove_null_rows)
+            for split, data in dataset.items()
+        }
+
+        return filtered_dataset
 
     def load_dataset(self) -> DatasetDict:
         """
@@ -52,7 +71,9 @@ class DatasetProcessor(ABC):
         """
         
         print(f"[INFO] Loading dataset from {self.dataset_path}")
-        return load_dataset(self.dataset_path)
+        dataset = load_dataset(self.dataset_path)
+        
+        return self.clean_dataset(dataset=dataset)
 
 
     @abstractmethod
@@ -80,6 +101,7 @@ class DatasetProcessor(ABC):
         
         dataset = self.load_dataset()
         
+        
         # Split into train (80%), eval (16%), and test (4%)
         split_dataset = dataset['train'].train_test_split(
             test_size=self.test_size, seed=self.seed
@@ -106,7 +128,6 @@ class DatasetProcessor(ABC):
         Returns:
             Dataset: A structured dataset with input and target sentences.
         """
-        
         return raw_dataset
     
     def preprocess(self):
@@ -120,7 +141,7 @@ class DatasetProcessor(ABC):
         print("[INFO] Preprocessing dataset...")
         
         train_dataset, eval_dataset, test_dataset = self.train_eval_test_split()
-
+    
 
         # Tokenize the datasets using map()
         tokenized_train_dataset = self.get_datasets(train_dataset).map(self.tokenize_function, batched=True)

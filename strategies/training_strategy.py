@@ -117,6 +117,8 @@ class TrainingStrategy(BasePipelineStrategy):
         # Training args
         training_args = self.create_training_arguments( **kwargs)
         
+        print(f"len(train_dataset) = {len(train_dataset)}")
+        
         # Initialize optimizer and scheduler
         self.setup_optimizer_and_scheduler(data_size=len(train_dataset), **kwargs)
         
@@ -159,6 +161,8 @@ class TrainingStrategy(BasePipelineStrategy):
             device=self.device
         )
         
+        print(train_dataset)
+        
         trainer = Trainer(
             model=self.model_manager.peft_model_prompt,  # We pass in the PEFT version of the foundation model
             args=training_args,  # The args for the training.
@@ -199,6 +203,9 @@ class TrainingStrategy(BasePipelineStrategy):
             max_grad_norm=kwargs.get("max_grad_norm"),
             per_device_train_batch_size=kwargs.get("batch_size"),
             per_device_eval_batch_size=kwargs.get("batch_size"),
+            # gradient_accumulation_steps=kwargs.get("gradient_accumulation_steps"),
+            do_train=True,
+            do_eval=True
         )
         
         # Print training arguments

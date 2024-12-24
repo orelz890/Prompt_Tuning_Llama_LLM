@@ -51,6 +51,7 @@ class PromptTuningPipeline:
         self.dataset_path = args.get("dataset_path")
         self.output_dir = args.get("output_dir")
         self.device = args.get("device")
+        self.task_type = args.get("task_type")
         
         print("\n Using: \n", self.dataset_path, self.output_dir, self.device)
         
@@ -58,7 +59,8 @@ class PromptTuningPipeline:
                                           device = self.device, 
                                           local_model_dir = args.get("base_local_model_dir"),
                                           auto_tokenizer = args.get("auto_tokenizer"),
-                                          auto_model = args.get("auto_model")
+                                          model_loader = args.get("model_loader"),
+                                          task_type = args.get("task_type"),
                                           )
 
     def train(self, strategy_class=TrainingStrategy, **kwargs):
@@ -182,7 +184,7 @@ class PromptTuningPipeline:
             self.model_manager.load_model_and_tokenizer()
             
             self.model_manager.configure_prompt_tuning(
-                num_virtual_tokens = kwargs.get("num_virtual_tokens") or conf.TRAIN_HYPER_PARAMETERS["num_virtual_tokens"]
+                num_virtual_tokens = kwargs.get("num_virtual_tokens") or conf.TRAIN_HYPER_PARAMETERS["num_virtual_tokens"],
             )
         elif type == "infer":
             self.model_manager.load_prompt_tuned_model(self.output_dir)

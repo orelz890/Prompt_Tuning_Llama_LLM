@@ -55,7 +55,7 @@ class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
         """
         self.model.eval()
         print("\n[INFO] Debugging model output...")
-        test_inputs = ["Hello!", "How are you?", "What is the capital of France?", "Are you a bot?"]
+        test_inputs = ["how are you?", "HOW ARE YOU", "what are you doing?", "where are you from", "Are you a bot?"]
 
         # Conversation history
         conversation_history = ""

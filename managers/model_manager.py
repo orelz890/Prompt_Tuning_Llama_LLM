@@ -27,7 +27,8 @@ class ModelManager:
     
     def __init__(self,
                 auto_tokenizer,
-                auto_model,
+                model_loader,
+                task_type,
                 model_name: str, 
                 local_model_dir: str = "./local_model", 
                 device='cpu', 
@@ -45,9 +46,10 @@ class ModelManager:
         self.local_model_dir = local_model_dir
         self.device = device
         self.auto_tokenizer = auto_tokenizer
-        self.auto_model = auto_model
+        self.model_loader = model_loader
+        self.task_type = task_type
         
-        print("Model_manager - auto_model: ", auto_model)
+        print("Model_manager - model_loader: ", model_loader)
         
         self.foundational_model = None
         self.peft_model_prompt = None
@@ -68,7 +70,7 @@ class ModelManager:
             # Load from local dir is exists
             print(f"[INFO] Loading model and tokenizer from local directory: {self.local_model_dir}")
             self.tokenizer = self.auto_tokenizer.from_pretrained(self.local_model_dir)
-            self.foundational_model = self.auto_model.from_pretrained(self.local_model_dir).to(self.device)
+            self.foundational_model = self.model_loader.from_pretrained(self.local_model_dir).to(self.device)
         
         else:
             # Download from Hugging Face
@@ -76,7 +78,7 @@ class ModelManager:
             
             print(f"[INFO] Downloading model and tokenizer: {self.model_name}")
             self.tokenizer = self.auto_tokenizer.from_pretrained(self.model_name)
-            self.foundational_model = self.auto_model.from_pretrained(self.model_name).to(self.device)
+            self.foundational_model = self.model_loader.from_pretrained(self.model_name).to(self.device)
             
             # Save pretrained chat bot model locally
             self.save_model( 
@@ -106,8 +108,7 @@ class ModelManager:
         
         # TODO - Read about it
         self.prompt_config = PromptTuningConfig( 
-            # task_type=TaskType.CAUSAL_LM,  # This type indicates the model will generate text. 
-            task_type=TaskType.SEQ_2_SEQ_LM,  # This type indicates the model will generate text. 
+            task_type=self.task_type or TaskType.CAUSAL_LM,
             prompt_tuning_init=PromptTuningInit.RANDOM,  # The added virtual tokens are initializad with random numbers
             num_virtual_tokens=num_virtual_tokens,
             tokenizer_name_or_path=self.model_name,  # The pre-trained model.
@@ -127,7 +128,7 @@ class ModelManager:
         self.tokenizer = self.auto_tokenizer.from_pretrained(output_dir)
         
         # Foundational model
-        self.foundational_model = self.auto_model.from_pretrained(
+        self.foundational_model = self.model_loader.from_pretrained(
             self.local_model_dir
         ).to(self.device)
         
