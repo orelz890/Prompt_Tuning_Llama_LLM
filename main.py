@@ -47,7 +47,7 @@ def get_required_info_from_user():
     
     # return action, prompt_model_name.lower(), foundational_model_name, dataset_name
 
-    model_name = "llama_avi_1b_64vt_100e_5"
+    model_name = "llama_avi_1b_64vt_50e_16"
     # return 1, model_name, "facebook/blenderbot-400M-distill", "google/Synthetic-Persona-Chat"
     # return 2, model_name, "facebook/blenderbot-400M-distill", "google/Synthetic-Persona-Chat"
     # return 3, model_name, "facebook/blenderbot-400M-distill", "google/Synthetic-Persona-Chat"

@@ -169,7 +169,7 @@ class TrainingStrategy(BasePipelineStrategy):
             train_dataset=train_dataset,  # The dataset used to tyrain the model.
             eval_dataset=eval_dataset,
             data_collator=data_collator,
-            # optimizers=(self.optimizer, self.scheduler),  # Custom optimizer and scheduler
+            optimizers=(self.optimizer, self.scheduler),  # Custom optimizer and scheduler
             callbacks=[test_callback]
             # tokenizer=self.model_manager.tokenizer,
         )
@@ -238,23 +238,23 @@ class TrainingStrategy(BasePipelineStrategy):
         
         print("num_training_steps: ", num_training_steps)
         
-        self.scheduler = get_scheduler(
-            name=kwargs.get("lr_scheduler_type"),
-            optimizer=self.optimizer,
-            # num_warmup_steps=0.1 * num_training_steps,
-            num_warmup_steps=5,
-            num_training_steps=num_training_steps,
-        )
-        
-        # self.scheduler = ReduceLROnPlateau(
-        #     optimizer = self.optimizer,
-        #     mode = kwargs.get("mode"),
-        #     factor = kwargs.get("factor"),
-        #     patience = kwargs.get("patience"),
-        #     threshold = kwargs.get("threshold"),
-        #     verbose = kwargs.get("verbose"),
-        #     num_training_steps = num_training_steps,
+        # self.scheduler = get_scheduler(
+        #     name=kwargs.get("lr_scheduler_type"),
+        #     optimizer=self.optimizer,
+        #     # num_warmup_steps=0.1 * num_training_steps,
+        #     num_warmup_steps=5,
+        #     num_training_steps=num_training_steps,
         # )
+        
+        self.scheduler = ReduceLROnPlateau(
+            optimizer = self.optimizer,
+            mode = kwargs.get("mode"),
+            factor = kwargs.get("factor"),
+            patience = kwargs.get("patience"),
+            threshold = kwargs.get("threshold"),
+            verbose = kwargs.get("verbose"),
+            # num_training_steps = num_training_steps,
+        )
         
         print("\n[INFO] Optimizer Arguments:")
         print(self.optimizer.state_dict())
