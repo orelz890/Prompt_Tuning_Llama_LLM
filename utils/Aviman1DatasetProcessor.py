@@ -23,36 +23,19 @@ class Aviman1DatasetProcessor(DatasetProcessor):
         Tokenization logic for the Aviman1 dataset.
 
         Args:
-            examples: A batch of dataset examples containing "Questions" and "Answers" fields.
+            examples: A batch of dataset examples containing "Questions" and "Answers", "prompt" fields.
 
         Returns:
-            dict: Tokenized inputs and labels.
+            Tensor: Tokenized inputs and labels.
         """
-            
-        # Convert questions and answers to strings
-        questions = ["[User]: " + str(q) + "\n[MODEL]: " for q in examples["Questions"]]
-        answers = [str(a) for a in examples["Answers"]]
+
+        tokens = self.tokenizer(examples['prompt'], padding="max_length", truncation=True, max_length=128)
+        # Set padding token labels to -100 to ignore them in loss calculation
+        tokens['labels'] = [
+            -100 if token == self.tokenizer.pad_token_id else token for token in tokens['input_ids']
+        ]
         
-
-        # Tokenize inputs (questions)
-        inputs = self.tokenizer(
-            questions,
-            truncation=True,
-            padding=False,
-            max_length=self.max_length,
-        )
-
-        # Tokenize targets (answers)
-        labels = self.tokenizer(
-            text_target=answers,
-            truncation=True,
-            padding=False,
-            max_length=self.max_length,
-        )["input_ids"]
-
-        # Add labels to inputs
-        inputs["labels"] = labels
-        return inputs
+        return tokens
 
     def load_dataset(self):
         """
@@ -67,5 +50,9 @@ class Aviman1DatasetProcessor(DatasetProcessor):
 
         # Drop the 'Unnamed: 2' column
         dataset = dataset.remove_columns(['Unnamed: 2'])
-
-        return self.clean_dataset(dataset=dataset)
+        dataset = self.clean_dataset(dataset=dataset)
+        
+        # Create the instruct prompt
+        new_dataset = dataset.map(self.apply_chat_template)
+        
+        return new_dataset

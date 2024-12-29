@@ -54,7 +54,7 @@ def main():
             outputs = model.generate(
                 input_ids=inputs["input_ids"],
                 do_sample=True,             # Enable sampling for varied responses
-                temperature=0.7,            # Control randomness
+                # temperature=0.7,            # Control randomness
                 top_p=0.9,                  # Nucleus sampling
                 top_k=50,                   # Top-K sampling
                 max_new_tokens=50,          # Limit generated tokens

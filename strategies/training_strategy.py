@@ -113,7 +113,7 @@ class TrainingStrategy(BasePipelineStrategy):
         train_dataset, eval_dataset,_= self.preprocess_dataset(
             **{**conf.DATA_PATH, **conf.DATASET, **conf.TOKENIZER}
         )
-                
+     
         # Training args
         training_args = self.create_training_arguments( **kwargs)
         
@@ -200,7 +200,7 @@ class TrainingStrategy(BasePipelineStrategy):
             # metric_for_best_model=kwargs.get("metric_for_best_model"),
             # save_total_limit=kwargs.get("save_total_limit"),
             fp16=kwargs.get("fp16"),
-            max_grad_norm=kwargs.get("max_grad_norm"),
+            # max_grad_norm=kwargs.get("max_grad_norm"),
             per_device_train_batch_size=kwargs.get("batch_size"),
             per_device_eval_batch_size=kwargs.get("batch_size"),
             # gradient_accumulation_steps=kwargs.get("gradient_accumulation_steps"),

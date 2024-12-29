@@ -52,22 +52,24 @@ class InferenceStrategy(BasePipelineStrategy):
         print("[INFO] Entering interactive chat mode. Type 'exit' to quit.")
 
         with torch.no_grad():
+            messages = [
+                # {"role": "system", "content": "You are a bot that responds to weather queries. You should reply with the unit used in the queried location."},
+            ]
+
             while True:
-                user_input = input("\n[USER]: ")
+                user_input = str(input("\n[USER]: "))
                 if user_input.lower() in {"exit", "quit"}:
                     print("[INFO] Exiting chat.")
                     break
+                
+                messages.append({"role": "user", "content": user_input})
 
-                # Tokenize user input with attention mask
-                inputs = self.model_manager.tokenizer(
-                    user_input,
-                    return_tensors="pt",
-                    padding=True,
-                    truncation=True,
-                    max_length=kwargs.get("max_length")  # Cap input length
-                ).to(self.device)
-
-
+                inputs = self.model_manager.tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_dict=True, return_tensors="pt")
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                
+                tokens = [self.model_manager.tokenizer.convert_ids_to_tokens(x) for x in inputs['input_ids']]
+                print(inputs['input_ids']," = ", tokens) 
+            
                 # Generate output
                 outputs = self.get_outputs(
                     inputs=inputs,
@@ -75,14 +77,12 @@ class InferenceStrategy(BasePipelineStrategy):
                     **kwargs
                 )
                 
-                print(user_input)
-                
+                print(self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True))
+               
                 # Print info about the model inputs and outputs
                 self.print_info(inputs=inputs, outputs=outputs)
 
-                # Decode and print the model's response
-                response = self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True)
-                print(f"[MODEL]: {response}\n")
+
                 
     def get_outputs(self, inputs, model_type: str, **kwargs):
         
@@ -102,16 +102,17 @@ class InferenceStrategy(BasePipelineStrategy):
         else:
             model = self.model_manager.peft_model_prompt
         
+        model.eval()
+        
         outputs = model.generate(
-            input_ids= inputs["input_ids"],
-            attention_mask= inputs["attention_mask"],
+            **inputs,
             do_sample= kwargs.get("do_sample"),
             max_new_tokens= kwargs.get("max_new_tokens"),
             # max_length=kwargs.get("max_tokens_length"),
             # min_length=kwargs.get("min_tokens_length"),
             # length_penalty=kwargs.get("length_penalty"),
             # num_beams=kwargs.get("num_beams"),  # Use beam search
-            temperature= kwargs.get("temperature"),
+            # temperature= kwargs.get("temperature"),
             top_p= kwargs.get("top_p"),
             top_k= kwargs.get("top_k"),
             repetition_penalty= kwargs.get("repetition_penalty"),  # Avoid repetition.
@@ -131,28 +132,6 @@ class InferenceStrategy(BasePipelineStrategy):
         """
         
         # Convert input IDs to tokens for the entire batch
-        print(
-            [
-                self.model_manager.tokenizer.convert_ids_to_tokens(id)
-                for input_ids in inputs["input_ids"]
-                for id in input_ids.tolist()
-            ],
-        )
+        response = self.model_manager.tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+        print(f"[MODEL]: {response}\n")
 
-        # Convert output IDs to tokens
-        print(
-            [self.model_manager.tokenizer.convert_ids_to_tokens(id) for id in outputs[0].tolist()],
-        )
-
-        # Count total tokens in the generated output
-        total_tokens = outputs.size(1)  # Outputs is of shape (batch_size, seq_length)
-
-        # Count input tokens (optional, if you want new tokens only)
-        input_token_count = inputs["input_ids"].size(1)
-
-        # Count only newly generated tokens
-        new_tokens_count = total_tokens - input_token_count
-
-        print(f"Total tokens in output: {total_tokens}")
-        print(f"Input tokens: {input_token_count}")
-        print(f"Newly generated tokens: {new_tokens_count}")

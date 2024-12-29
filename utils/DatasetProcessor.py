@@ -55,13 +55,26 @@ class DatasetProcessor(ABC):
             return all(value is not None for value in example.values())
 
         # Apply the filter to remove rows with nulls for each split
-        filtered_dataset = {
-            split: data.filter(remove_null_rows)
-            for split, data in dataset.items()
-        }
+        for split in dataset.keys():
+            dataset[split] = dataset[split].filter(remove_null_rows)
 
-        return filtered_dataset
+        return dataset
 
+    # Define a function to apply the chat template
+    def apply_chat_template(self, example):
+        
+        print(example)
+
+        messages = [
+            {"role": "user", "content": example['Questions']},
+            {"role": "assistant", "content": example['Answers']}
+        ]
+        
+        prompt = self.tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        return {"prompt": prompt}
+    
     def load_dataset(self) -> DatasetDict:
         """
         Load the dataset using Hugging Face's `load_dataset`.
@@ -72,8 +85,10 @@ class DatasetProcessor(ABC):
         
         print(f"[INFO] Loading dataset from {self.dataset_path}")
         dataset = load_dataset(self.dataset_path)
+        dataset = self.clean_dataset(dataset=dataset)
+        new_dataset = dataset.map(self.apply_chat_template)
         
-        return self.clean_dataset(dataset=dataset)
+        return new_dataset
 
 
     @abstractmethod
@@ -148,13 +163,12 @@ class DatasetProcessor(ABC):
         tokenized_eval_dataset = self.get_datasets(eval_dataset).map(self.tokenize_function, batched=True)
         tokenized_test_dataset = self.get_datasets(test_dataset).map(self.tokenize_function, batched=True)
         
+        tokenized_train_dataset = tokenized_train_dataset.remove_columns(['Questions', 'Answers', 'prompt'])
+        tokenized_eval_dataset = tokenized_eval_dataset.remove_columns(['Questions', 'Answers', 'prompt'])
+        tokenized_test_dataset = tokenized_test_dataset.remove_columns(['Questions', 'Answers', 'prompt'])
+
         print("Len(tokenized_train_dataset) = ", tokenized_train_dataset)
         print("Len(tokenized_eval_dataset) = ", tokenized_eval_dataset)
         print("Len(tokenized_test_dataset) = ", tokenized_test_dataset)
         
-        
-        # import sys
-        # sys.stdout.flush()
-        
-        # raise("stop here")
         return tokenized_train_dataset, tokenized_eval_dataset, tokenized_test_dataset

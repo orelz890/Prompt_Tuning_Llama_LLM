@@ -59,6 +59,20 @@ class ModelManager:
         # Ensure the local model directory exists
         os.makedirs(self.local_model_dir, exist_ok=True)
 
+    def get_output(self, model_type, inputs):
+        model = self.peft_model_prompt if model_type == "peft" else self.foundational_model
+        
+        # Generate model response
+        return model.generate(
+            **inputs,
+            do_sample=True,             # Enable sampling for varied responses
+            top_p=0.9,                  # Nucleus sampling
+            max_new_tokens=100,         # Maximum new tokens to generate
+            repetition_penalty=1.2,     # Penalize repetition
+            eos_token_id=self.tokenizer.eos_token_id,
+            pad_token_id=self.tokenizer.pad_token_id,
+        )
+
     def load_model_and_tokenizer(self):
         """
         Load the foundational model and tokenizer, either from a local directory or the Hugging Face Hub.
@@ -107,9 +121,9 @@ class ModelManager:
         print(f"[INFO] Configuring Prompt Tuning with {num_virtual_tokens} virtual tokens.")
         
         # TODO - Read about it
-        self.prompt_config = PromptTuningConfig( 
+        self.prompt_config = PromptTuningConfig(
             task_type=self.task_type or TaskType.CAUSAL_LM,
-            prompt_tuning_init=PromptTuningInit.RANDOM,  # The added virtual tokens are initializad with random numbers
+            prompt_tuning_init=PromptTuningInit.RANDOM,  # The added virtual tokens are initialized with random numbers
             num_virtual_tokens=num_virtual_tokens,
             tokenizer_name_or_path=self.model_name,  # The pre-trained model.
         )
@@ -124,6 +138,7 @@ class ModelManager:
             output_dir (str): Directory containing the prompt-tuned model.
         """
         
+        print(output_dir, self.auto_tokenizer)
         print(f"[INFO] Loading prompt-tuned model from {output_dir}")
         self.tokenizer = self.auto_tokenizer.from_pretrained(output_dir)
         
@@ -170,3 +185,4 @@ class ModelManager:
             self.foundational_model.save_pretrained(output_dir)
         else:
             raise ValueError("[ERROR] Invalid model_type. Use 'foundational' or 'peft'.")
+
