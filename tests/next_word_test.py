@@ -60,6 +60,14 @@ class TestPromptTuning(unittest.TestCase):
                        ("how is your day", "its", "good"),
                        ("Nice whats there special", "nothing", "special"),
                        ("What work", "DATA", "ANALIS"),
+                       ("what about you?", "super going i enjoy a lot today with my", "family"),
+                       ("how are you?", "going asusual and vibing a song with my", "family"),
+                       ("hello are you there", "ehats your birthday", "date"),
+                       ("What is the topic about our conversation?", "human bot", "chat"),
+                       ("what is your occupation?", "I am a", "nurse"),
+                       ("you bot or human?", "Ok, so I'm an actual", "person"),
+                       ("which is your hobbies?", "watching movie and", "listening"),
+                       ("HOW ARE YOU", "I AM", "FINE"),
                        ]
 
         messages = [
@@ -99,8 +107,8 @@ class TestPromptTuning(unittest.TestCase):
             if p_predict.startswith(label):
                 peft_counter += 1
 
-        print("foundational_counter: ", foundational_counter)
-        print("peft_counter: ", peft_counter)
+        print("foundational_counter: (", foundational_counter,"/", int(len(messages)/2), ")")
+        print("peft_counter: (", peft_counter,"/", int(len(messages)/2), ")")
 
 
 if __name__ == '__main__':
