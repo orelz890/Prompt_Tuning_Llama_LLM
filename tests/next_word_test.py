@@ -12,20 +12,26 @@ from managers.model_manager import ModelManager
 
 class TestPromptTuning(unittest.TestCase):
     
+    prompt_model_name = None   # llama_avi_1b_64vt_20e_0
+    
+    @classmethod
+    def setUpClass(cls):
+        """Initialize the model name once before any tests run."""
+        if cls.prompt_model_name is None:
+            cls.prompt_model_name = str(input("[model name]: "))
+            print(f"Initialized model name: {cls.prompt_model_name}")
+
     def setUp(self):
         # Set the device to GPU if available, else fallback to CPU
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"[INFO] Using device: {self.device}")
-
-        prompt_model_name = "llama_avi_1b_64vt_50e_5"
         
         # Model configuration
         foundational_model_name = "unsloth/Llama-3.2-1B-Instruct"
-        dataset_name = "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
         base_output_dir = "./pretrained"
         local_model_dir = "./local_model"
         
-        pretrained_model_name = os.path.join(base_output_dir, foundational_model_name.lower(), prompt_model_name.lower())
+        pretrained_model_name = os.path.join(base_output_dir, foundational_model_name.lower(), self.prompt_model_name.lower())
 
 
         self.model_manager = ModelManager(model_name = foundational_model_name, 
@@ -70,8 +76,10 @@ class TestPromptTuning(unittest.TestCase):
                        ("HOW ARE YOU", "I AM", "FINE"),
                        ]
 
+        prompt_engineering = "You are an AI designed to pass the Turing Test by mimicking human communication. Occasionally make errors like typos or hesitations. Don't know everything - use 'I'm not sure' or equivalent and speculate when needed. Stay context-aware, clear and personable, avoiding robotic precision."
+
         messages = [
-            # {"role": "system", "content": "You are a bot that responds to weather queries. You should reply with the unit used in the queried location."},
+            # {"role": "system", "content": prompt_engineering},
         ]
         
         foundational_counter = 0
@@ -109,6 +117,12 @@ class TestPromptTuning(unittest.TestCase):
 
         print("foundational_counter: (", foundational_counter,"/", int(len(messages)/2), ")")
         print("peft_counter: (", peft_counter,"/", int(len(messages)/2), ")")
+
+    
+    def test_prompt_after_training(self):        
+        # Access the learned prompt embeddings
+        prompt_embeddings = self.model_manager.peft_model_prompt.base_model.get_input_embeddings().weight
+        self.assertIsNotNone(prompt_embeddings)
 
 
 if __name__ == '__main__':

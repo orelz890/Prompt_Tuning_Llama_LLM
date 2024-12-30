@@ -120,11 +120,14 @@ class ModelManager:
         
         print(f"[INFO] Configuring Prompt Tuning with {num_virtual_tokens} virtual tokens.")
         
+        prompt_tuning_init_text="You are an AI designed to pass the Turing Test by mimicking human communication. Occasionally make errors like typos or hesitations. Don't know everything - use 'I'm not sure' or equivalent and speculate when needed. Stay context-aware, clear and personable, avoiding robotic precision."
+        
         # TODO - Read about it
         self.prompt_config = PromptTuningConfig(
             task_type=self.task_type or TaskType.CAUSAL_LM,
-            prompt_tuning_init=PromptTuningInit.RANDOM,  # The added virtual tokens are initialized with random numbers
+            prompt_tuning_init=PromptTuningInit.TEXT,  # The added virtual tokens are initialized with random numbers
             num_virtual_tokens=num_virtual_tokens,
+            prompt_tuning_init_text=prompt_tuning_init_text,
             tokenizer_name_or_path=self.model_name,  # The pre-trained model.
         )
         

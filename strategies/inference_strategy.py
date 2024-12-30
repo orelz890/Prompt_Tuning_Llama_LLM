@@ -67,8 +67,8 @@ class InferenceStrategy(BasePipelineStrategy):
                 inputs = self.model_manager.tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_dict=True, return_tensors="pt")
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
                 
-                tokens = [self.model_manager.tokenizer.convert_ids_to_tokens(x) for x in inputs['input_ids']]
-                print(inputs['input_ids']," = ", tokens) 
+                # tokens = [self.model_manager.tokenizer.convert_ids_to_tokens(x) for x in inputs['input_ids']]
+                # print(inputs['input_ids']," = ", tokens) 
             
                 # Generate output
                 outputs = self.get_outputs(
@@ -77,7 +77,7 @@ class InferenceStrategy(BasePipelineStrategy):
                     **kwargs
                 )
                 
-                print(self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True))
+                # print(self.model_manager.tokenizer.decode(outputs[0], skip_special_tokens=True))
                
                 # Print info about the model inputs and outputs
                 self.print_info(inputs=inputs, outputs=outputs)
