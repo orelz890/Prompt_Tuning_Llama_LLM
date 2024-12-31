@@ -22,65 +22,28 @@ class GooglePersonaDatasetProcessor(DatasetProcessor):
     
     def train_eval_test_split(self):
         """
-        Overrides DatasetProcessor.train_eval_test_split.
-        Splits the dataset into train, validation, and test sets.
+            Overrides DatasetProcessor.train_eval_test_split.
+            Splits the dataset into train, validation, and test sets.
 
-        Returns:
-            tuple: Train, validation, and test datasets.
+            Returns:
+                tuple: Train, validation, and test datasets.
         """
         
         dataset = self.load_dataset()
-        print(len(dataset["train"]))
         return dataset["train"], dataset["validation"], dataset["test"]
-        
-    def tokenize_function(self, examples):
-        """
-        Overrides DatasetProcessor.tokenize_function.
-        Tokenization logic for the Google Persona Chat dataset.
-
-        Args:
-            examples: A batch of dataset examples containing input and target sentences.
-
-        Returns:
-            dict: Tokenized inputs and labels.
-        """
-
-        user1_sentences = examples["input_sentences"]
-        user2_sentences = examples["target_sentences"]
-
-        # Tokenize inputs (questions)
-        inputs = self.tokenizer(
-            user1_sentences,
-            truncation=True,
-            padding=False,
-            max_length=self.max_length,
-        )
-
-        # Tokenize targets (answers)
-        labels = self.tokenizer(
-            text_target=user2_sentences,
-            truncation=True,
-            padding=False,
-            max_length=self.max_length,
-        )["input_ids"]
-
-        # Add labels to inputs
-        inputs["labels"] = labels
-    
-        return inputs
 
     
     def get_datasets(self, raw_dataset):
         """
-        Overrides DatasetProcessor.get_datasets.
-        Processes raw datasets to extract user conversations and structure them
-        into input-output sentence pairs.
+            Overrides DatasetProcessor.get_datasets.
+            Processes raw datasets to extract user conversations and structure them
+            into input-output sentence pairs.
 
-        Args:
-            raw_dataset: The raw dataset containing user conversations.
+            Args:
+                raw_dataset: The raw dataset containing user conversations.
 
-        Returns:
-            Dataset: A structured dataset with input and target sentences.
+            Returns:
+                Dataset: A structured dataset with input and target sentences.
         """
         
         user1_sentences = []
@@ -105,5 +68,20 @@ class GooglePersonaDatasetProcessor(DatasetProcessor):
             "input_sentences": user1_sentences,
             "target_sentences": user2_sentences
         })
-            
-    
+
+    def get_input_label_columns_names(self):
+        return 'input_sentences', 'target_sentences'
+
+    def load_dataset(self):
+        """
+            Load the dataset using Hugging Face's `load_dataset`.
+
+            Returns:
+                DatasetDict: Loaded dataset.
+        """
+        
+        print(f"[INFO] Loading dataset from {self.dataset_path}")
+        dataset = load_dataset(self.dataset_path)
+        dataset = DatasetProcessor.clean_dataset(dataset=dataset)
+        
+        return dataset

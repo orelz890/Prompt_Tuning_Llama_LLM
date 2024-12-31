@@ -156,9 +156,7 @@ class TrainingStrategy(BasePipelineStrategy):
         
         # Add the custom callback
         test_callback = DebuggingStrategy(
-            model=self.model_manager.peft_model_prompt,
-            tokenizer=self.model_manager.tokenizer,
-            device=self.device
+            model_manager=self.model_manager,
         )
         
         print(train_dataset)

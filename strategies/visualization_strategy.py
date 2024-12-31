@@ -20,20 +20,20 @@ class VisualizationStrategy(BasePipelineStrategy):
     
     def __init__(self, output_dir: str):
         """
-        Initialize the VisualizationStrategy with the output directory.
+            Initialize the VisualizationStrategy with the output directory.
 
-        Args:
-            output_dir (str): Path to the directory containing model checkpoints.
+            Args:
+                output_dir (str): Path to the directory containing model checkpoints.
         """
         
         self.output_dir = output_dir
 
     def get_last_checkpoint_dir(self):
         """
-        Identify the latest checkpoint directory.
+            Identify the latest checkpoint directory.
 
-        Returns:
-            str: Path to the most recent checkpoint directory, or None if no checkpoints are found.
+            Returns:
+                str: Path to the most recent checkpoint directory, or None if no checkpoints are found.
         """
         
         checkpoints = [
@@ -49,7 +49,7 @@ class VisualizationStrategy(BasePipelineStrategy):
 
     def execute(self):
         """
-        Visualize training and evaluation loss curves based on log data.
+            Visualize training and evaluation loss curves based on log data.
         """
         
         print("[INFO] Visualizing training and evaluation logs.")

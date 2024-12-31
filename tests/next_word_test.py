@@ -37,7 +37,7 @@ class TestPromptTuning(unittest.TestCase):
         self.model_manager = ModelManager(model_name = foundational_model_name, 
                                           device = self.device, 
                                           local_model_dir = local_model_dir,
-                                          auto_tokenizer = AutoTokenizer,
+                                          tokenizer_class = AutoTokenizer,
                                           model_loader = AutoModelForCausalLM,
                                           task_type = TaskType.CAUSAL_LM,
                                           )
@@ -100,7 +100,9 @@ class TestPromptTuning(unittest.TestCase):
             
             
             foundational_outputs = self.model_manager.get_output("foundational", inputs)
+            print(type(foundational_outputs))
             peft_outputs = self.model_manager.get_output("peft", inputs)
+            print(type(peft_outputs))
 
             input_size = len(inputs["input_ids"][0])
             

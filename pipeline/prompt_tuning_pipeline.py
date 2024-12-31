@@ -22,45 +22,63 @@ from utils.GooglePersonaDatasetProcessor import GooglePersonaDatasetProcessor
 # Pipeline
 class PromptTuningPipeline:
     """
-    A pipeline to handle various stages of prompt tuning, including training, inference,
-    evaluation, visualization, and debugging. Integrates multiple strategies and a model manager.
+    A pipeline designed to handle various stages of prompt tuning for machine learning models. 
+    This includes tasks such as training, inference, evaluation, visualization, and debugging.
+
+    The pipeline integrates multiple strategies and leverages a `ModelManager` to streamline the 
+    management of models and associated components like tokenizers, foundational model and prompt tuning model.
 
     Attributes:
-        dataset_path (str): Path to the dataset used for training/inference.
-        output_dir (str): Directory to save outputs, such as model checkpoints or visualizations.
-        device (str): The device (e.g., 'cuda', 'cpu') on which computations are performed.
-        model_manager (ModelManager): Manages the foundational model and its configurations.
+        dataset_path (str): Path to the dataset used for training and evaluation.
+        task_type (TaskType): The type of task the pipeline is handling, defined by the `TaskType` enumeration.
+                             Examples: TaskType.CAUSAL_LM, TaskType.SEQ2SEQ_LM, etc.
+        output_dir (str): Directory where outputs such as checkpoints and visualizations are saved.
+        device (str): The device used for computation (e.g., "cuda" or "cpu").
+        model_manager (ModelManager): Manages model-related operations such as loading, configuration and generate output.
     """
-    
-    def __init__(self, **kwargs):
+    def __init__(self, 
+                 model_loader,
+                 task_type,
+                 tokenizer_class,
+                 model_name,
+                 dataset_path,
+                 local_model_dir,
+                 **kwargs):
         
         """
-        Initializes the PromptTuningPipeline with configurations and custom arguments.
+        Initializes the PromptTuningPipeline with configurations and user-defined arguments.
 
         Args:
-            **kwargs: Additional arguments that override default configurations, such as:
-                - foundational_model (str): Name of the foundational model to use.
-                - base_output_dir (str): Directory for saving outputs.
-                - base_local_model_dir (str): Directory for storing the local model.
-                - device (str): Device for computation (e.g., 'cuda', 'cpu').
+            model_loader (class or callable): A class or callable object for loading the model.
+                                              Examples: AutoModelForCausalLM, AutoModelForSeq2SeqLM.
+            task_type (TaskType): The type of task this pipeline will handle, defined by the `TaskType` enumeration.
+                                  Examples: TaskType.CAUSAL_LM, TaskType.SEQ2SEQ_LM, etc.
+            tokenizer_class (class): The tokenizer class associated with the model.
+                                     Examples: AutoTokenizer.
+            model_name (str): Name of the foundational model. (e.g., "unsloth/Llama-3.2-1B-Instruct").
+            dataset_path (str): Path to the dataset used for training or evaluation.
+            local_model_dir (str): Path to the directory where the model is stored locally.
+            **kwargs: Additional arguments to override default configurations. Common keys include:
+                - output_dir (str): Directory to save outputs, such as model checkpoints or visualizations.
+                - device (str): Device for computation, e.g., "cuda" or "cpu".
         """
         
         # Merge defaults with provided kwargs
-        args = {**conf.MODELS, "device": conf.DEVICE, **conf.PATHS, **kwargs}
+        args = {"device": conf.DEVICE, **conf.PATHS, **kwargs}
         
-        self.dataset_path = args.get("dataset_path")
+        self.dataset_path = dataset_path
+        self.task_type = task_type
         self.output_dir = args.get("output_dir")
         self.device = args.get("device")
-        self.task_type = args.get("task_type")
         
         print("\n Using: \n", self.dataset_path, self.output_dir, self.device)
         
-        self.model_manager = ModelManager(model_name = args.get("foundational_model"), 
+        self.model_manager = ModelManager(model_name = model_name,
+                                          local_model_dir = local_model_dir,
                                           device = self.device, 
-                                          local_model_dir = args.get("base_local_model_dir"),
-                                          auto_tokenizer = args.get("auto_tokenizer"),
-                                          model_loader = args.get("model_loader"),
-                                          task_type = args.get("task_type"),
+                                          tokenizer_class = tokenizer_class,
+                                          model_loader = model_loader,
+                                          task_type = task_type,
                                           )
 
     def train(self, strategy_class=TrainingStrategy, **kwargs):
@@ -161,7 +179,7 @@ class PromptTuningPipeline:
         Visualize the outputs or results using a visualization strategy.
 
         Args:
-            output_dir (str): Directory containing results to visualize.
+            output_dir (str): Directory containing results to visualize (check points).
         """
         
         visual_strategy = strategy_class(output_dir)
@@ -169,18 +187,21 @@ class PromptTuningPipeline:
         
     def setup(self, type: str, **kwargs):
         """
-        Setup the pipeline for a specific task type (training or inference).
+            Configures the pipeline for a specific task type, such as training or inference.
 
-        Args:
-            type (str): Task type, either "train" or "infer".
-            **kwargs: Additional setup arguments.
+            Args:
+                type (str): The type of task to set up the pipeline for. Supported values:
+                    - "train": Configures the pipeline for training.
+                    - "infer": Configures the pipeline for inference using a prompt-tuned model.
+                **kwargs: Additional parameters for task-specific configurations, such as:
+                    - `num_virtual_tokens` (int): The number of virtual tokens to use for prompt tuning during training. 
+                        Defaults to the value specified in `conf.TRAIN_HYPER_PARAMETERS["num_virtual_tokens"]`.
+            Raises:
+                ValueError: If the provided `type` is neither "train" nor "infer".
 
-        Raises:
-            ValueError: If the task type is invalid.
         """
         
         if type == "train":
-            
             self.model_manager.load_model_and_tokenizer()
             
             self.model_manager.configure_prompt_tuning(
@@ -192,7 +213,21 @@ class PromptTuningPipeline:
             raise ValueError("Invalid PromptTuningPipeline Setup Type")
     
     def get_specific_data_processor(self):
-    
+        """
+            Returns the appropriate data processor class based on the dataset path.
+
+            This method selects and returns a specific data processor class that corresponds to the 
+            dataset being used. Each data processor class is responsible for handling preprocessing, 
+            formatting, and loading of the dataset for the pipeline.
+
+            Returns:
+                class: The data processor class corresponding to the dataset path.
+
+            Raises:
+                ValueError: If the dataset path does not match a known dataset, prompting the user to 
+                            implement a custom data processor that extends `DataProcessor`.
+
+        """
         if self.dataset_path == "google/Synthetic-Persona-Chat":
             return GooglePersonaDatasetProcessor
         
