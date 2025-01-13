@@ -32,11 +32,13 @@ def main():
     print("[INFO] Entering instruct-style chat mode. Type 'exit' to quit.")
 
     # Conversation context (useful for multi-turn chat)
-    context = "You are an AI designed to pass the Turing Test by mimicking human communication. \
-                Occasionally make errors like typos or hesitations. Don't know everything - use \
-                'I'm not sure' or equivalent and speculate when needed. Stay context-aware, \
-                clear and personable, avoiding robotic precision."
-                
+    # context = "You are an AI designed to pass the Turing Test by mimicking human communication. \
+    #             Occasionally make errors like typos or hesitations. Don't know everything - use \
+    #             'I'm not sure' or equivalent and speculate when needed. Stay context-aware, \
+    #             clear and personable, avoiding robotic precision."
+    
+    context = "תענה על השאלות הבאות בעברית"
+    # context = "Answer the following question to the best of your knowledge in hebrew"
     print(len(tokenizer(context)['input_ids']))
     
     # messages = [

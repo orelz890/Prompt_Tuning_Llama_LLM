@@ -21,7 +21,7 @@ class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
             device (str): The device (e.g., 'cuda', 'cpu') used for computations.
     """
     
-    def __init__(self, model_manager):
+    def __init__(self, model_manager, test_inputs):
         """
             Initialize the DebuggingStrategy with the model_manager.
 
@@ -29,6 +29,7 @@ class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
                 model: The model_manager containing the model to debug.
         """
         self.model_manager: ModelManager = model_manager
+        self.test_inputs = test_inputs
 
     def on_epoch_end(self, args, state, control, **kwargs):
         """
@@ -53,12 +54,11 @@ class DebuggingStrategy(BasePipelineStrategy, TrainerCallback):
         
         print("\n[INFO] Debugging model output...")
 
-        # Predefined test inputs
-        test_inputs = ["how are you?", "HOW ARE YOU", "what are you doing?", "where are you from", "Are you a bot?"]
-
         messages = []
         
-        for input_text in test_inputs:
+        print("self.test_inputs = ", self.test_inputs)
+
+        for input_text in self.test_inputs:
             
             # Format the input as an instruct-style message
             messages.append({"role": "user", "content": str(input_text)})

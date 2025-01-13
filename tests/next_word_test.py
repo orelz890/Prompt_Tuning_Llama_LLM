@@ -111,7 +111,7 @@ class TestPromptTuning(unittest.TestCase):
             print("foundational: ", f_predict)
             print("peft: ", p_predict)
             print("label: ", label, "\n")
-            
+
             if f_predict.startswith(label):
                 foundational_counter += 1
             if p_predict.startswith(label):

@@ -130,7 +130,7 @@ class ModelManager:
             self.foundational_model.resize_token_embeddings(len(self.tokenizer))  # Resize embeddings if new tokens are added
             print(f"[INFO] Padding token set to: {self.tokenizer.pad_token}. token_id: {self.tokenizer.pad_token_id}")
 
-    def configure_prompt_tuning(self, num_virtual_tokens):
+    def configure_prompt_tuning(self, num_virtual_tokens, prompt_tuning_init_text):
         """
             Configures prompt tuning for the foundational model using a specified number of virtual tokens.
 
@@ -156,7 +156,6 @@ class ModelManager:
         """
         print(f"[INFO] Configuring Prompt Tuning with {num_virtual_tokens} virtual tokens.")
         
-        prompt_tuning_init_text="You are an AI designed to pass the Turing Test by mimicking human communication. Occasionally make errors like typos or hesitations. Don't know everything - use 'I'm not sure' or equivalent and speculate when needed. Stay context-aware, clear ,personable and consistent, avoiding robotic precision."
         
         # TODO - Read about it
         self.prompt_config = PromptTuningConfig(
@@ -227,4 +226,3 @@ class ModelManager:
             self.foundational_model.save_pretrained(output_dir)
         else:
             raise ValueError("[ERROR] Invalid model_type. Use 'foundational' or 'peft'.")
-

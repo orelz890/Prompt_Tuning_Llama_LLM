@@ -13,7 +13,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BlenderbotForCondi
 from peft import TaskType
 
 
-actions = {'exit': 0, 'infer': 1, 'train': 2, 'visualize': 3}
+actions = {'exit': 0, 'infer': 1, 'train': 2, 'visualize': 3, 'test': 4}
 foundational_models = {'facebook_400M': 1, 'other': 2}
 
 from transformers import BlenderbotForConditionalGeneration
@@ -47,11 +47,15 @@ def get_required_info_from_user():
     
     # return action, prompt_model_name.lower(), foundational_model_name, dataset_name
 
-    model_name = "llama_avi_1b_64vt_20e_2"
+    model_name = "llama_avi_1b_64vt_20e_1"
     # return 1, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
-    return 2, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
+    # return 2, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
     # return 3, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
+    return 4, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
 
+    # model_name = "llama_1b_question_answering_64vt_20e_3"
+    # return 4, model_name, "unsloth/Llama-3.2-1B-Instruct", "yuvalav/hebrew-qa"
+    
 def get_auto_model_for_specific_llm(foundational_model_name):
     taskType = TaskType.CAUSAL_LM
     model_loader = AutoModelForCausalLM
@@ -73,7 +77,7 @@ def main():
         flag = False
         
         try:
-            action, prompt_model_name, foundational_model_name, dataset_name = get_required_info_from_user()
+            action, prompt_model_name, foundational_model_name, dataset_path = get_required_info_from_user()
             
             # Foundational Model Folder Path
             local_model_dir = os.path.join(conf.PATHS["base_local_model_dir"], foundational_model_name.lower())
@@ -85,7 +89,7 @@ def main():
             
             pipeline: PromptTuningPipeline = PromptTuningPipeline(
                 model_name = foundational_model_name,
-                dataset_path = dataset_name,
+                dataset_path = dataset_path,
                 output_dir = output_dir,
                 local_model_dir = local_model_dir,
                 device = conf.DEVICE,
@@ -95,7 +99,12 @@ def main():
             )
             
             if action == actions['train']:
-                pipeline.train()
+                
+                pipeline.train(
+                    prompt_engineering = "תענה על השאלות הבאות בעברית",
+                    test_inputs = ["כיצד הוגבל המידע שניתן להשיג באמצעות העוגיות?", "איזו מדינה קבעה חוקים הנוגעים ליצירת עוגיות חדשות?", "על ידי מי עוצבה תוכנית הנאמנות והביטחון של הנשיא טרומן?"],
+                    num_virtual_tokens=25
+                )
 
             elif action == actions['infer']:
                 pipeline.infer(
@@ -103,9 +112,13 @@ def main():
                 )
             elif action == actions['visualize']:
                 pipeline.visualize(output_dir)
-        
+
+            elif action == actions['test']:
+                pipeline.test()
+                
         except ValueError as e:
             print(e)
+
     
 
 if __name__ == "__main__":

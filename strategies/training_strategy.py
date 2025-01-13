@@ -111,9 +111,9 @@ class TrainingStrategy(BasePipelineStrategy):
         
         # Prepare the datasets
         train_dataset, eval_dataset,_= self.preprocess_dataset(
-            **{**conf.DATA_PATH, **conf.DATASET, **conf.TOKENIZER}
+            **{**conf.DATASET, **conf.TOKENIZER, **{"dataset_path": self.dataset_path}}
         )
-     
+
         # Training args
         training_args = self.create_training_arguments( **kwargs)
         
@@ -121,13 +121,14 @@ class TrainingStrategy(BasePipelineStrategy):
         
         # Initialize optimizer and scheduler
         self.setup_optimizer_and_scheduler(data_size=len(train_dataset), **kwargs)
-        
+
         # Train
         trainer = self.create_trainer(
             training_args=training_args,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             data_collator=self.data_collator,  # Dynamic padding happens here
+            test_inputs=kwargs.get("test_inputs")
         )
         
         trainer.train()
@@ -140,7 +141,7 @@ class TrainingStrategy(BasePipelineStrategy):
         print("[INFO] Finished Training...")
         
 
-    def create_trainer(self, training_args, train_dataset, eval_dataset, data_collator):
+    def create_trainer(self, training_args, train_dataset, eval_dataset, data_collator, test_inputs):
         """
         Creates a Hugging Face Trainer instance for managing the training loop.
 
@@ -157,6 +158,7 @@ class TrainingStrategy(BasePipelineStrategy):
         # Add the custom callback
         test_callback = DebuggingStrategy(
             model_manager=self.model_manager,
+            test_inputs=test_inputs
         )
         
         print(train_dataset)
@@ -199,8 +201,8 @@ class TrainingStrategy(BasePipelineStrategy):
             # save_total_limit=kwargs.get("save_total_limit"),
             fp16=kwargs.get("fp16"),
             # max_grad_norm=kwargs.get("max_grad_norm"),
-            per_device_train_batch_size=kwargs.get("batch_size"),
-            per_device_eval_batch_size=kwargs.get("batch_size"),
+            per_device_train_batch_size=kwargs.get("per_device_train_batch_size"),
+            per_device_eval_batch_size=kwargs.get("per_device_eval_batch_size"),
             # gradient_accumulation_steps=kwargs.get("gradient_accumulation_steps"),
             do_train=True,
             do_eval=True

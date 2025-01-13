@@ -78,8 +78,9 @@ class InferenceStrategy(BasePipelineStrategy):
                 )
 
                 # Print info about the model inputs and outputs
-                self.print_info(inputs=inputs, outputs=outputs)
-    
+                response = self.print_info(inputs=inputs, outputs=outputs)
+                messages.append({"role": "assistant", "content": response})
+
     def print_info(self, inputs, outputs):
         """
             Print detailed information about inputs and outputs during inference.
@@ -92,3 +93,4 @@ class InferenceStrategy(BasePipelineStrategy):
         # Convert input IDs to tokens for the entire batch
         response = self.model_manager.tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
         print(f"[MODEL]: {response}\n")
+        return response

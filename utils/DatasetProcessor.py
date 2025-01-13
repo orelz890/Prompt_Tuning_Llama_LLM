@@ -40,6 +40,16 @@ class DatasetProcessor(ABC):
         self.test_size = kwargs.get("test_size", 0.2)
         self.seed = kwargs.get("seed", 42)
         self.max_length = kwargs.get("max_length", 128)
+    
+    def print_args(self):
+        arg = {
+            "dataset_path": self.dataset_path,
+            "batch_size": self.batch_size,
+            "test_size": self.test_size,
+            "seed": self.seed,
+            "max_length": self.max_length
+        }
+        print("args: ", arg)
         
     @staticmethod
     def clean_dataset(dataset):

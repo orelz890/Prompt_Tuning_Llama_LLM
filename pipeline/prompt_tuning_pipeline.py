@@ -10,13 +10,12 @@ from managers.model_manager import ModelManager
 
 from strategies.training_strategy import TrainingStrategy
 from strategies.inference_strategy import InferenceStrategy
-from strategies.evaluation_strategy import EvaluationStrategy
 from strategies.visualization_strategy import VisualizationStrategy
-from strategies.debugging_strategy import DebuggingStrategy
-from strategies.fine_tuning_strategy import FineTuningStrategy 
+from strategies.test_strategy import TestStrategy
 
 from utils.Aviman1DatasetProcessor import Aviman1DatasetProcessor
 from utils.GooglePersonaDatasetProcessor import GooglePersonaDatasetProcessor
+from utils.QuestionAnsweringDatasetProcessor import QuestionAnsweringDatasetProcessor
 
 
 # Pipeline
@@ -124,7 +123,7 @@ class PromptTuningPipeline:
         self.setup(type="train", **kwargs)
 
         # Merge defaults with provided kwargs
-        args = {**conf.TRAIN_HYPER_PARAMETERS, **conf.SCHEDULER, **conf.OPTIMIZER, **conf.DATASET, **kwargs}
+        args = {**conf.TRAIN_HYPER_PARAMETERS, **conf.SCHEDULER, **conf.OPTIMIZER, **conf.DATASET, **conf.DEBUG, **kwargs}
 
         # Train
         train_strategy = strategy_class(
@@ -184,6 +183,23 @@ class PromptTuningPipeline:
         
         visual_strategy = strategy_class(output_dir)
         visual_strategy.execute()
+    
+    def test(self, **kwargs):
+        
+        self.setup(type="infer")
+        
+        # Merge defaults with provided kwargs
+        args = {**conf.DATASET, **conf.TOKENIZER, **kwargs}
+
+
+        ts = TestStrategy(
+            model_manager=self.model_manager,
+            dataset_path=self.dataset_path,
+            dataset_processor=self.get_specific_data_processor(),
+            **args
+        )
+        
+        ts.execute()
         
     def setup(self, type: str, **kwargs):
         """
@@ -200,14 +216,16 @@ class PromptTuningPipeline:
                 ValueError: If the provided `type` is neither "train" nor "infer".
 
         """
-        
+    
         if type == "train":
             self.model_manager.load_model_and_tokenizer()
-            
+                        
             self.model_manager.configure_prompt_tuning(
                 num_virtual_tokens = kwargs.get("num_virtual_tokens") or conf.TRAIN_HYPER_PARAMETERS["num_virtual_tokens"],
+                prompt_tuning_init_text=kwargs.get("prompt_engineering") or conf.PROMPT["prompt_engineering"]
             )
-        elif type == "infer":
+            
+        elif type == "infer" or type == "test":
             self.model_manager.load_prompt_tuned_model(self.output_dir)
         else:
             raise ValueError("Invalid PromptTuningPipeline Setup Type")
@@ -234,6 +252,8 @@ class PromptTuningPipeline:
         elif self.dataset_path == "Aviman1/Bot_Human_Prompt_Tuning_Dataset":
             return Aviman1DatasetProcessor
 
+        elif self.dataset_path == "yuvalav/hebrew-qa":
+            return QuestionAnsweringDatasetProcessor
         else:
             raise ValueError("You need to implement a data processor for your specific dataset that extends DataProcessor")
     
