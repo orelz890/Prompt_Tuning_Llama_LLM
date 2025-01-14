@@ -119,8 +119,10 @@ class TestStrategy(BasePipelineStrategy):
         return winner
         
     def calc_scores(self):
-        # Load dataset, model, tokenizer, and BLEU metric
+        # Measures Lexical Variation and Semantics - evaluate meaning
         bleu = load("bleu")
+        
+        # Measures n-gram overlap between the generated text and the reference text, focusing on recall.
         rouge = load("rouge")
         meteor = load("meteor")
 
@@ -159,13 +161,15 @@ class TestStrategy(BasePipelineStrategy):
                 # print("[label]: ", label)
                 
                 # BLEU
-                scores['bleu'][0].append(bleu.compute(predictions=[f_response], references=[label], smooth=True))
-                scores['bleu'][1].append(bleu.compute(predictions=[p_response], references=[label], smooth=True))
+                # scores['bleu'][0].append(bleu.compute(predictions=[f_response], references=[label], smooth=True))
+                # scores['bleu'][1].append(bleu.compute(predictions=[p_response], references=[label], smooth=True))
                 
-                scores['rouge'][0].append(rouge.compute(predictions=[f_response], references=[label]))
-                scores['rouge'][1].append(rouge.compute(predictions=[p_response], references=[label]))
-
-
+                # scores['rouge'][0].append(rouge.compute(predictions=[f_response], references=[label]))
+                # scores['rouge'][1].append(rouge.compute(predictions=[p_response], references=[label]))
+                
+                scores['meteor'][0].append(meteor.compute(predictions=[f_response], references=[label]))
+                scores['meteor'][1].append(meteor.compute(predictions=[p_response], references=[label]))
+                
         # # Final results
         # f_average = sum(foundational_bleu_scores) / len(foundational_bleu_scores)
         # p_average = sum(peft_bleu_scores) / len(peft_bleu_scores)
@@ -210,7 +214,7 @@ class TestStrategy(BasePipelineStrategy):
             f_scores = v[0]
             p_scores = v[1]
             
-            # print(f_scores, type(f_scores))
+            print(f_scores, type(f_scores))
             if k == 'bleu':
                 f_scores = [x['bleu'] for x in f_scores]
                 p_scores = [x['bleu'] for x in p_scores]
@@ -223,3 +227,10 @@ class TestStrategy(BasePipelineStrategy):
                 print("Better BLEU Score: ", "Prompt Tuning" if p_average > f_average else "Llama")
             elif k == 'rouge':
                 print("Better ROUGE Score: ", TestStrategy.compare_rouge_scores(f_scores, p_scores))
+            elif k == 'meteor':
+                f_average = sum([x['meteor'] for x in f_scores]) / len(f_scores)
+                p_average = sum([x['meteor'] for x in p_scores]) / len(p_scores)
+                
+                print(f"Foundational Model Average METEOR Score: {f_average}")
+                print(f"Prompt Tuning Model Average METEOR Score: {p_average}")
+                print("Better METEOR Score: ","Prompt Tuning" if p_average > f_average else "Llama")
