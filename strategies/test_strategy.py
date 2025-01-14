@@ -3,6 +3,7 @@ from evaluate import load
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from torch.utils.data import DataLoader
+from collections import defaultdict
 
 import re
 import os
@@ -41,29 +42,20 @@ class TestStrategy(BasePipelineStrategy):
         )
 
         print(self.dataset)
-        
-        _, _, test_dataset2 = dp.train_eval_test_split()
-        
+                
         data_collator = CustomDataCollatorSameSize(
             tokenizer=model_manager.tokenizer,
             device=model_manager.device
         )
         
-        dp.proc
+        _, _, tokenized_test_dataset = dp.preprocess()
         
         self.data_loader = DataLoader(
-            test_dataset2,  # Your Dataset object
+            tokenized_test_dataset,  # Your Dataset object
             batch_size=1,  # Adjust based on memory
             collate_fn=data_collator  # Use your DataCollator
         )
-    
-    # Function to normalize text
-    @staticmethod
-    def normalize_text(text):
-        text = text.lower()
-        text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
-        return text
-    
+
     def execute(self):
         print("[INFO] Start Testing.")
         
@@ -71,30 +63,72 @@ class TestStrategy(BasePipelineStrategy):
         self.model_manager.peft_model_prompt.eval()
 
         # Bleu
-        # self.calc_bleu_score()
+        
+        TestStrategy.print_scores(self.calc_scores())
         
         # Perplexity
-        self.calc_perplexity()
+        # self.calc_perplexity()
+
+    # Function to normalize text
+    @staticmethod
+    def normalize_text(text):
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+        return text
+    
+    staticmethod
+    def calc_loss(model, inputs, labels):
+        logits = model(
+            **inputs
+        ).logits
+        
+        num_virtual_tokens = logits.shape[1] - labels.shape[1]
+        logits = logits[:, num_virtual_tokens:, :].contiguous()
+
+        # print(foundational_outputs)
+        loss = cross_entropy(
+            logits.view(-1, logits.size(-1)),  # Flatten logits
+            labels.view(-1),                   # Flatten labels
+            ignore_index=-100                  # Ignore padding tokens
+        )
+        return loss
 
     def calc_perplexity(self):
         # Iterate over dataset
+        f_perplexities = []
+        p_perplexities = []
+        
         for batch in self.data_loader:
             with torch.no_grad():
-                print(batch, type(batch))
-                raise("stop")
+                batch = {k: v.to(self.model_manager.device) for k, v in batch.items()}
+ 
+                f_loss = TestStrategy.calc_loss(self.model_manager.foundational_model, batch, batch['labels'])
+                p_loss = TestStrategy.calc_loss(self.model_manager.peft_model_prompt, batch, batch['labels'])
 
-    def calc_bleu_score(self):
+                f_perplexities.append(torch.exp(f_loss).item())
+                p_perplexities.append(torch.exp(p_loss).item())
+
+        f_average_perplexity = sum(f_perplexities) / len(f_perplexities)
+        p_average_perplexity = sum(p_perplexities) / len(p_perplexities)
+
+        print(f"Foundational Average Perplexity: {f_average_perplexity}")
+        print(f"Prompt Tuning Average Perplexity: {p_average_perplexity}")
+        
+        winner = "Prompt Tuning" if p_average_perplexity < f_average_perplexity else "Llama"
+        print(f"Winner: ", winner)
+        return winner
+        
+    def calc_scores(self):
         # Load dataset, model, tokenizer, and BLEU metric
         bleu = load("bleu")
+        rouge = load("rouge")
+        meteor = load("meteor")
 
-        foundational_bleu_scores = []
-        peft_bleu_scores = []
-
+        scores = defaultdict(lambda: ([],[]))
+        
         # Iterate over dataset
         for batch in self.dataset:
-            with torch.no_grad():
-                print(batch)
-                
+            with torch.no_grad():                
                 user_input = batch['data']
                 label = batch['label']
                 
@@ -115,8 +149,8 @@ class TestStrategy(BasePipelineStrategy):
                 )
                 
                 f_response = self.model_manager.tokenizer.decode(f_outputs[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
-                f_response = TestStrategy.normalize_text(f_response)
                 p_response = self.model_manager.tokenizer.decode(p_outputs[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+                f_response = TestStrategy.normalize_text(f_response)
                 p_response = TestStrategy.normalize_text(p_response)
                 
                 # print("[INPUT]: ", batch['data'])
@@ -125,12 +159,67 @@ class TestStrategy(BasePipelineStrategy):
                 # print("[label]: ", label)
                 
                 # BLEU
-                f_bleu_results = bleu.compute(predictions=[f_response], references=[label], smooth=True)
-                foundational_bleu_scores.append(f_bleu_results["bleu"])
+                scores['bleu'][0].append(bleu.compute(predictions=[f_response], references=[label], smooth=True))
+                scores['bleu'][1].append(bleu.compute(predictions=[p_response], references=[label], smooth=True))
                 
-                p_bleu_results = bleu.compute(predictions=[p_response], references=[label], smooth=True)
-                peft_bleu_scores.append(p_bleu_results["bleu"])
+                scores['rouge'][0].append(rouge.compute(predictions=[f_response], references=[label]))
+                scores['rouge'][1].append(rouge.compute(predictions=[p_response], references=[label]))
+
 
         # # Final results
-        print(f"Foundational Model Average BLEU Score: {sum(foundational_bleu_scores) / len(foundational_bleu_scores)}")
-        print(f"Prompt Tuning Model Average BLEU Score: {sum(peft_bleu_scores) / len(peft_bleu_scores)}")
+        # f_average = sum(foundational_bleu_scores) / len(foundational_bleu_scores)
+        # p_average = sum(peft_bleu_scores) / len(peft_bleu_scores)
+        
+        # print(f"Foundational Model Average BLEU Score: {f_average}")
+        # print(f"Prompt Tuning Model Average BLEU Score: {p_average}")
+        
+        # winner = "Prompt Tuning" if p_average > f_average else "Llama"
+        return scores
+    
+    @staticmethod
+    def compare_rouge_scores(f_scores, p_scores):
+        """
+        Compares ROUGE scores for two models and determines which is better overall.
+        Returns the name of the better model and the comparison for each score.
+        """
+        metrics = ['rouge1', 'rouge2', 'rougeL', 'rougeLsum']
+        comparison = {}
+        
+
+
+        # Compare metrics for each score
+        for metric in metrics:
+            f_average = sum([x[metric] for x in f_scores]) / len(f_scores)
+            p_average = sum([x[metric] for x in p_scores]) / len(p_scores)
+            
+            if p_average > f_average:
+                comparison[metric] = 'PT'
+            else:
+                comparison[metric] = 'Llama'
+
+        # Count the "wins" for each model
+        model1_wins = sum(1 for v in comparison.values() if v == 'PT')
+        model2_wins = sum(1 for v in comparison.values() if v == 'Llama')
+
+        # Determine the better model overall
+        return 'Prompt Tuning' if model1_wins > model2_wins else 'Llama'
+
+    def print_scores(scores):
+        
+        for k, v in scores.items():
+            f_scores = v[0]
+            p_scores = v[1]
+            
+            # print(f_scores, type(f_scores))
+            if k == 'bleu':
+                f_scores = [x['bleu'] for x in f_scores]
+                p_scores = [x['bleu'] for x in p_scores]
+                
+                f_average = sum(f_scores) / len(f_scores)
+                p_average = sum(p_scores) / len(p_scores)
+                
+                print(f"Foundational Model Average BLEU Score: {f_average}")
+                print(f"Prompt Tuning Model Average BLEU Score: {p_average}")
+                print("Better BLEU Score: ", "Prompt Tuning" if p_average > f_average else "Llama")
+            elif k == 'rouge':
+                print("Better ROUGE Score: ", TestStrategy.compare_rouge_scores(f_scores, p_scores))
