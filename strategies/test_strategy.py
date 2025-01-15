@@ -124,8 +124,14 @@ class TestStrategy(BasePipelineStrategy):
         
         # Measures n-gram overlap between the generated text and the reference text, focusing on recall.
         rouge = load("rouge")
+        
+        # Considers synonyms, stemming and word order
         meteor = load("meteor")
 
+        # Pretrained BERT model to evaluate the semantic similarity of two texts
+        bertscore = load("bertscore")
+        
+        
         scores = defaultdict(lambda: ([],[]))
         
         # Iterate over dataset
@@ -167,17 +173,11 @@ class TestStrategy(BasePipelineStrategy):
                 # scores['rouge'][0].append(rouge.compute(predictions=[f_response], references=[label]))
                 # scores['rouge'][1].append(rouge.compute(predictions=[p_response], references=[label]))
                 
-                scores['meteor'][0].append(meteor.compute(predictions=[f_response], references=[label]))
-                scores['meteor'][1].append(meteor.compute(predictions=[p_response], references=[label]))
-                
-        # # Final results
-        # f_average = sum(foundational_bleu_scores) / len(foundational_bleu_scores)
-        # p_average = sum(peft_bleu_scores) / len(peft_bleu_scores)
-        
-        # print(f"Foundational Model Average BLEU Score: {f_average}")
-        # print(f"Prompt Tuning Model Average BLEU Score: {p_average}")
-        
-        # winner = "Prompt Tuning" if p_average > f_average else "Llama"
+                # scores['meteor'][0].append(meteor.compute(predictions=[f_response], references=[label]))
+                # scores['meteor'][1].append(meteor.compute(predictions=[p_response], references=[label]))
+
+                scores['bertscore'][0].append(bertscore.compute(predictions=[f_response], references=[label], lang="en"))
+                scores['bertscore'][1].append(bertscore.compute(predictions=[p_response], references=[label], lang="en"))
         return scores
     
     @staticmethod
@@ -188,8 +188,6 @@ class TestStrategy(BasePipelineStrategy):
         """
         metrics = ['rouge1', 'rouge2', 'rougeL', 'rougeLsum']
         comparison = {}
-        
-
 
         # Compare metrics for each score
         for metric in metrics:
@@ -234,3 +232,11 @@ class TestStrategy(BasePipelineStrategy):
                 print(f"Foundational Model Average METEOR Score: {f_average}")
                 print(f"Prompt Tuning Model Average METEOR Score: {p_average}")
                 print("Better METEOR Score: ","Prompt Tuning" if p_average > f_average else "Llama")
+            elif k == 'bertscore':
+                f_average = sum([x['f1'][0] for x in f_scores]) / len(f_scores)
+                p_average = sum([x['f1'][0] for x in p_scores]) / len(p_scores)
+                
+                print(f"Foundational Model Average BERT Score: {f_average}")
+                print(f"Prompt Tuning Model Average BERT Score: {p_average}")
+                print("Better METEOR Score: ","Prompt Tuning" if p_average > f_average else "Llama")
+            
