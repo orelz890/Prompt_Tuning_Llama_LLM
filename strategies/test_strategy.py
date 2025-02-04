@@ -167,14 +167,14 @@ class TestStrategy(BasePipelineStrategy):
                 # print("[label]: ", label)
                 
                 # BLEU
-                # scores['bleu'][0].append(bleu.compute(predictions=[f_response], references=[label], smooth=True))
-                # scores['bleu'][1].append(bleu.compute(predictions=[p_response], references=[label], smooth=True))
+                scores['bleu'][0].append(bleu.compute(predictions=[f_response], references=[label], smooth=True))
+                scores['bleu'][1].append(bleu.compute(predictions=[p_response], references=[label], smooth=True))
                 
-                # scores['rouge'][0].append(rouge.compute(predictions=[f_response], references=[label]))
-                # scores['rouge'][1].append(rouge.compute(predictions=[p_response], references=[label]))
+                scores['rouge'][0].append(rouge.compute(predictions=[f_response], references=[label]))
+                scores['rouge'][1].append(rouge.compute(predictions=[p_response], references=[label]))
                 
-                # scores['meteor'][0].append(meteor.compute(predictions=[f_response], references=[label]))
-                # scores['meteor'][1].append(meteor.compute(predictions=[p_response], references=[label]))
+                scores['meteor'][0].append(meteor.compute(predictions=[f_response], references=[label]))
+                scores['meteor'][1].append(meteor.compute(predictions=[p_response], references=[label]))
 
                 scores['bertscore'][0].append(bertscore.compute(predictions=[f_response], references=[label], lang="en"))
                 scores['bertscore'][1].append(bertscore.compute(predictions=[p_response], references=[label], lang="en"))
@@ -212,7 +212,7 @@ class TestStrategy(BasePipelineStrategy):
             f_scores = v[0]
             p_scores = v[1]
             
-            print(f_scores, type(f_scores))
+            # print(f_scores, type(f_scores))
             if k == 'bleu':
                 f_scores = [x['bleu'] for x in f_scores]
                 p_scores = [x['bleu'] for x in p_scores]
@@ -220,8 +220,8 @@ class TestStrategy(BasePipelineStrategy):
                 f_average = sum(f_scores) / len(f_scores)
                 p_average = sum(p_scores) / len(p_scores)
                 
-                print(f"Foundational Model Average BLEU Score: {f_average}")
-                print(f"Prompt Tuning Model Average BLEU Score: {p_average}")
+                # print(f"Foundational Model Average BLEU Score: {f_average}")
+                # print(f"Prompt Tuning Model Average BLEU Score: {p_average}")
                 print("Better BLEU Score: ", "Prompt Tuning" if p_average > f_average else "Llama")
             elif k == 'rouge':
                 print("Better ROUGE Score: ", TestStrategy.compare_rouge_scores(f_scores, p_scores))
@@ -229,14 +229,14 @@ class TestStrategy(BasePipelineStrategy):
                 f_average = sum([x['meteor'] for x in f_scores]) / len(f_scores)
                 p_average = sum([x['meteor'] for x in p_scores]) / len(p_scores)
                 
-                print(f"Foundational Model Average METEOR Score: {f_average}")
-                print(f"Prompt Tuning Model Average METEOR Score: {p_average}")
+                # print(f"Foundational Model Average METEOR Score: {f_average}")
+                # print(f"Prompt Tuning Model Average METEOR Score: {p_average}")
                 print("Better METEOR Score: ","Prompt Tuning" if p_average > f_average else "Llama")
             elif k == 'bertscore':
                 f_average = sum([x['f1'][0] for x in f_scores]) / len(f_scores)
                 p_average = sum([x['f1'][0] for x in p_scores]) / len(p_scores)
                 
-                print(f"Foundational Model Average BERT Score: {f_average}")
-                print(f"Prompt Tuning Model Average BERT Score: {p_average}")
-                print("Better METEOR Score: ","Prompt Tuning" if p_average > f_average else "Llama")
+                # print(f"Foundational Model Average BERT Score: {f_average}")
+                # print(f"Prompt Tuning Model Average BERT Score: {p_average}")
+                print("Better BERT Score: ","Prompt Tuning" if p_average > f_average else "Llama")
             

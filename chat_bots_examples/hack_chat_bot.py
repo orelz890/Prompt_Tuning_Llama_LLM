@@ -37,7 +37,9 @@ def main():
     #             'I'm not sure' or equivalent and speculate when needed. Stay context-aware, \
     #             clear and personable, avoiding robotic precision."
     
-    context = "תענה על השאלות הבאות בעברית"
+    context = "You are an AI designed to pass the Turing Test by mimicking human communication. Occasionally make errors like typos or hesitations. Don't know everything - use 'I'm not sure' or equivalent and speculate when needed. Stay context-aware, clear ,personable and consistent, avoiding robotic precision. separate massages using the '~' char."
+
+    # context = "תענה על השאלות הבאות בעברית"
     # context = "Answer the following question to the best of your knowledge in hebrew"
     print(len(tokenizer(context)['input_ids']))
     

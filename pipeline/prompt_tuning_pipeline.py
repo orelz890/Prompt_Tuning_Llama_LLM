@@ -11,12 +11,13 @@ from managers.model_manager import ModelManager
 from strategies.training_strategy import TrainingStrategy
 from strategies.inference_strategy import InferenceStrategy
 from strategies.visualization_strategy import VisualizationStrategy
+from strategies.fine_tuning_strategy import FineTuningStrategy
 from strategies.test_strategy import TestStrategy
 
 from utils.Aviman1DatasetProcessor import Aviman1DatasetProcessor
 from utils.GooglePersonaDatasetProcessor import GooglePersonaDatasetProcessor
 from utils.QuestionAnsweringDatasetProcessor import QuestionAnsweringDatasetProcessor
-
+from utils.HumanConversationDatasetProcessor import HumanConversationDatasetProcessor
 
 # Pipeline
 class PromptTuningPipeline:
@@ -134,6 +135,22 @@ class PromptTuningPipeline:
             )
 
         train_strategy.execute(**args)
+
+    def fine_tune(self, strategy_class=FineTuningStrategy, **kwargs):
+        self.setup(type="fine_tune", **kwargs)
+        
+        # Merge defaults with provided kwargs
+        args = {**conf.TRAIN_HYPER_PARAMETERS, **conf.SCHEDULER, **conf.OPTIMIZER, **conf.DATASET, **conf.DEBUG, **kwargs}
+
+        # Train
+        tune_strategy = strategy_class(
+            model_manager=self.model_manager, 
+            dataset_path=self.dataset_path, 
+            output_dir=self.output_dir,
+            dataset_processor=self.get_specific_data_processor()
+            )
+
+        tune_strategy.execute(**args)
         
     def infer(self, model_type="peft", strategy_class=InferenceStrategy, **kwargs):
         """
@@ -225,7 +242,7 @@ class PromptTuningPipeline:
                 prompt_tuning_init_text=kwargs.get("prompt_engineering") or conf.PROMPT["prompt_engineering"]
             )
             
-        elif type == "infer" or type == "test":
+        elif type == "infer" or type == "test" or type == "fine_tune":
             self.model_manager.load_prompt_tuned_model(self.output_dir)
         else:
             raise ValueError("Invalid PromptTuningPipeline Setup Type")
@@ -254,6 +271,8 @@ class PromptTuningPipeline:
 
         elif self.dataset_path == "yuvalav/hebrew-qa":
             return QuestionAnsweringDatasetProcessor
+        elif self.dataset_path.startswith("OrelZamler/Human_Conversations"):
+            return HumanConversationDatasetProcessor
         else:
             raise ValueError("You need to implement a data processor for your specific dataset that extends DataProcessor")
     

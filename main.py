@@ -13,7 +13,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BlenderbotForCondi
 from peft import TaskType
 
 
-actions = {'exit': 0, 'infer': 1, 'train': 2, 'visualize': 3, 'test': 4}
+actions = {'exit': 0, 'infer': 1, 'train': 2, 'visualize': 3, 'test': 4, 'fine_tune': 5}
 foundational_models = {'facebook_400M': 1, 'other': 2}
 
 from transformers import BlenderbotForConditionalGeneration
@@ -47,11 +47,14 @@ def get_required_info_from_user():
     
     # return action, prompt_model_name.lower(), foundational_model_name, dataset_name
 
-    model_name = "llama_avi_1b_64vt_20e_1"
+    model_name = "llama_orel_augmented_1b_64vt_20e_1"
     # return 1, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
     # return 2, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
     # return 3, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
-    return 4, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
+    # return 4, model_name, "unsloth/Llama-3.2-1B-Instruct", "Aviman1/Bot_Human_Prompt_Tuning_Dataset"
+    
+    
+    return 5, model_name, "unsloth/Llama-3.2-1B-Instruct", "OrelZamler/Human_Conversations_augmented"
 
     # model_name = "llama_1b_question_answering_64vt_20e_3"
     # return 4, model_name, "unsloth/Llama-3.2-1B-Instruct", "yuvalav/hebrew-qa"
@@ -101,11 +104,15 @@ def main():
             if action == actions['train']:
                 
                 pipeline.train(
-                    prompt_engineering = "תענה על השאלות הבאות בעברית",
-                    test_inputs = ["כיצד הוגבל המידע שניתן להשיג באמצעות העוגיות?", "איזו מדינה קבעה חוקים הנוגעים ליצירת עוגיות חדשות?", "על ידי מי עוצבה תוכנית הנאמנות והביטחון של הנשיא טרומן?"],
-                    num_virtual_tokens=25
+                    # prompt_engineering = "תענה על השאלות הבאות בעברית",
+                    # test_inputs = ["כיצד הוגבל המידע שניתן להשיג באמצעות העוגיות?", "איזו מדינה קבעה חוקים הנוגעים ליצירת עוגיות חדשות?", "על ידי מי עוצבה תוכנית הנאמנות והביטחון של הנשיא טרומן?"],
+                    num_virtual_tokens=70
                 )
 
+            if action == actions['fine_tune']:
+                pipeline.fine_tune(
+                    
+                )
             elif action == actions['infer']:
                 pipeline.infer(
                     # Change Default Values If Needed
